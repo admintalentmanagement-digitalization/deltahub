@@ -52,7 +52,7 @@
     <div class="feature-grid">
       <div class="feature-card"><b>Smart Lookup & Update</b><span>Update thousands of records without manual VLOOKUP. Match by NIK or any selected key column.</span></div>
       <div class="feature-card"><b>Formula Logic Engine</b><span>Apply configurable business rules such as Active SAP, Potential Non Active, Talent tagging, and custom logic.</span></div>
-      <div class="feature-card"><b>Exception Center</b><span>Detect blank keys, duplicate conflicts, missing references, and mapping risks before applying updates.</span></div>
+      <div class="feature-card"><b>Exception Center</b><span>Detect blank keys, duplicate conflicts, missing references, and strict mapping mismatches before applying updates.</span></div>
       <div class="feature-card"><b>Downloadable Error Reports</b><span>Download only problematic rows so users do not need to search through thousands of records manually.</span></div>
       <div class="feature-card"><b>Audit Trail & Change History</b><span>Track before-after values, source files, update timestamps, and applied change counts.</span></div>
       <div class="feature-card"><b>Multi-Step Data Integration</b><span>Consolidate Employee, Talent, PAT, Succession, and custom updates into one Working Master.</span></div>
@@ -220,6 +220,24 @@ function suggestRefCol(masterCol){
   return S.ref.cols.find(x=>String(x).toLowerCase().trim()===clean)||'';
 }
 
+function headerKey(v){return String(v||'').toLowerCase().trim().replace(/\s+/g,' ')}
+function isPatSpecialMapping(target,source){
+  const t=headerKey(target), s=headerKey(source);
+  return /^pat\s*(20\d{2}|19\d{2})$/.test(t) && s==='pat';
+}
+function isMappingAllowed(target,source){
+  return headerKey(target)===headerKey(source) || isPatSpecialMapping(target,source);
+}
+function mappingMismatchRows(km,kr,selected){
+  const rows=[];
+  if(km&&kr&&headerKey(km)!==headerKey(kr)) rows.push({NIK:'',Name:'',Column:'Key Column',Value:'Master: '+km+' | Reference: '+kr});
+  selected.forEach(c=>{
+    const refCol=(S.mappings&&S.mappings[c])||suggestRefCol(c);
+    if(refCol&&!isMappingAllowed(c,refCol)) rows.push({NIK:'',Name:'',Column:c,Value:c+' ← '+refCol});
+  });
+  return rows;
+}
+
 function updateColumnSafety(){
   const warn=document.getElementById('column-warning');
   const detect=document.getElementById('detect-btn');
@@ -258,16 +276,19 @@ function renderMappings(){
   const targets=[...S.selected].filter(c=>!isProtected(c));
   if(!targets.length||!S.ref.cols.length){mapBox.classList.add('hidden');mapBox.innerHTML='';return}
   mapBox.classList.remove('hidden');
-  let html='<h3 style="margin-bottom:6px">Column Mapping</h3><div class="muted">Target kiri = kolom Working Master. Source kanan = kolom Reference. Contoh: <b>PAT 2025 ← PAT</b>.</div>';
+  let html='<h3 style="margin-bottom:6px">Column Mapping</h3><div class="attention"><b>⚠️ Column name must match</b><br>Untuk menghindari salah update, nama kolom target dan source harus sama. Contoh aman: <strong>Talent Class ← Talent Class</strong>, <strong>Name ← Name</strong>, <strong>NIK ← NIK</strong>.<br>Exception khusus PAT: <strong>PAT 2025 ← PAT</strong>, <strong>PAT 2024 ← PAT</strong>, <strong>PAT 2023 ← PAT</strong>.</div>';
   targets.forEach(c=>{
     if(!S.mappings)S.mappings={};
     if(!S.mappings[c])S.mappings[c]=suggestRefCol(c)||S.ref.cols[0]||'';
-    const opts=S.ref.cols.map(r=>'<option value="'+esc(r)+'" '+(r===S.mappings[c]?'selected':'')+'>'+esc(r)+'</option>').join('');
+    const mapped=S.mappings[c];
+    const allowed=isMappingAllowed(c,mapped);
+    const opts=S.ref.cols.map(r=>'<option value="'+esc(r)+'" '+(r===mapped?'selected':'')+'>'+esc(r)+'</option>').join('');
     html+='<div class="mapping-row"><div class="mapping-target">'+esc(c)+'</div><div class="mapping-arrow">←</div><select class="select" onchange="setMapping(\''+esc(c)+'\',this.value)">'+opts+'</select></div>';
+    if(!allowed){html+='<div class="attention" style="background:#FEF2F2;border-color:#FCA5A5;color:#991B1B;margin-top:6px"><b>Mapping mismatch</b><br>Target column <strong>'+esc(c)+'</strong> is mapped to source column <strong>'+esc(mapped)+'</strong>. Rename/select the matching source column before Detect Changes.</div>'}
   });
   mapBox.innerHTML=html;
 }
-function setMapping(target,source){if(!S.mappings)S.mappings={};S.mappings[target]=source;autoSave('mapping')}
+function setMapping(target,source){if(!S.mappings)S.mappings={};S.mappings[target]=source;renderMappings();autoSave('mapping')}
 function selectRecommended(){S.master.cols.forEach(c=>{if(suggestRefCol(c)&&!isProtected(c))S.selected.add(c)});S.steps[S.activeStep].selected=[...S.selected];refreshColumns();updateColumnSafety();updateHealth();autoSave('selectRecommended');toast('Kolom yang punya mapping dipilih')}
 function clearColumns(){S.selected.clear();S.steps[S.activeStep].selected=[];refreshColumns();updateColumnSafety();updateHealth();autoSave('clearColumns')}
 
@@ -311,6 +332,8 @@ function validateBeforeDetect(km,kr,selected){
   (S.ref.data||[]).forEach((r,i)=>{if(!norm(r[kr]))refBlank.push({NIK:'',Name:getNameValue(r),row:i+2})});
   if(masterBlank.length)errors.push(buildException('blank_master_key','error','Blank Key Detected','Working Master: '+masterName+' | Key Column: '+km,'Selected key column ('+km+') contains blank values in working master.','DeltaHub cannot determine which employee should be matched.','Remove or complete blank key rows in the working master, then upload again.',masterBlank));
   if(refBlank.length)errors.push(buildException('blank_reference_key','error','Blank Key Detected','Reference File: '+refName+' | Key Column: '+kr,'Selected key column ('+kr+') contains blank values in reference file.','DeltaHub cannot determine which reference records should be matched.','Remove or complete blank key rows in the reference file, then upload again.',refBlank));
+  const mismatch=mappingMismatchRows(km,kr,selected);
+  if(mismatch.length)errors.push(buildException('column_mapping_mismatch','error','Column Mapping Mismatch','Working Master: '+masterName+' | Reference File: '+refName,'Selected key/update column names do not match. Only exact header matches are allowed, except PAT year columns can map to PAT.','DeltaHub blocks Detect Changes to prevent accidental overwrite caused by wrong column mapping.','Rename the source column or select the matching source column. Example: Talent Class ← Talent Class, Name ← Name, NIK ← NIK. PAT exception: PAT 2025 ← PAT.',mismatch));
   if(errors.length)return {blocked:true,errors,warnings};
   const groups={};
   (S.ref.data||[]).forEach((r,i)=>{const k=norm(r[kr]); if(!k)return; (groups[k]=groups[k]||[]).push({row:r,idx:i})});
