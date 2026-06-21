@@ -18,6 +18,7 @@
 .exception-actions{margin-top:8px}
 .exception-actions .btn{background:#fff}
 .exception-empty{background:#eef7ff;color:#0f4ea8;border:1px solid #cfe3ff;border-radius:10px;padding:10px 12px;font-size:12px}
+.feature-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}.feature-card{background:#eef7ff;border:1px solid #cfe3ff;border-radius:12px;padding:12px;color:#0f4ea8;font-size:12px;min-height:104px}.feature-card b{display:block;font-size:13px;margin-bottom:5px;color:#0b3f91}.feature-card span{color:#245f9f}.recent-list{display:grid;gap:8px;margin-top:10px}.recent-item{background:#eef7ff;border:1px solid #cfe3ff;border-radius:10px;padding:10px 12px}.recent-title{font-weight:800;color:#0b3f91}.recent-meta{font-size:12px;color:#6b6860;margin-top:2px}.recent-actions{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}.btn-soft-danger{background:#fee2e2;color:#991b1b;border-color:#fecaca}.btn-soft-danger:hover{background:#fecaca}@media(max-width:900px){.feature-grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.feature-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -42,15 +43,21 @@
         <button class="btn btn-primary" onclick="createProject()">Create Workspace</button>
       </div>
       <div id="create-empty" class="muted">Klik <b>Create New Project</b> untuk mulai, atau buka file project JSON lama.</div>
-      <div id="continue-box" class="ok hidden" style="margin-top:12px"></div>
+      <div id="continue-box" class="hidden" style="margin-top:12px"></div>
     </div>
   </div>
   <div class="card card-pad" style="margin-top:18px">
-    <h3>Designed for secure and efficient reconciliation</h3>
-    <div class="grid3" style="margin-top:12px">
-      <div class="warn"><b>Controlled update</b><br>Bandingkan by NIK, pilih kolom target, preview delta, lalu apply.</div>
-      <div class="warn"><b>Token-safe AI</b><br>AI hanya berjalan saat user klik tombol AI.</div>
-      <div class="warn"><b>Privacy-aware</b><br>Desain AI tidak mengirim full employee rows secara otomatis.</div>
+    <h3>What DeltaHub Can Do</h3>
+    <p class="muted" style="margin-top:4px">A safer way to update Working Master data with clear controls, exception reports, and audit trails.</p>
+    <div class="feature-grid">
+      <div class="feature-card"><b>Smart Lookup & Update</b><span>Update thousands of records without manual VLOOKUP. Match by NIK or any selected key column.</span></div>
+      <div class="feature-card"><b>Formula Logic Engine</b><span>Apply configurable business rules such as Active SAP, Potential Non Active, Talent tagging, and custom logic.</span></div>
+      <div class="feature-card"><b>Exception Center</b><span>Detect blank keys, duplicate conflicts, missing references, and mapping risks before applying updates.</span></div>
+      <div class="feature-card"><b>Downloadable Error Reports</b><span>Download only problematic rows so users do not need to search through thousands of records manually.</span></div>
+      <div class="feature-card"><b>Audit Trail & Change History</b><span>Track before-after values, source files, update timestamps, and applied change counts.</span></div>
+      <div class="feature-card"><b>Multi-Step Data Integration</b><span>Consolidate Employee, Talent, PAT, Succession, and custom updates into one Working Master.</span></div>
+      <div class="feature-card"><b>Safe Apply Process</b><span>Preview all detected changes first. Nothing is written to the Working Master without user confirmation.</span></div>
+      <div class="feature-card"><b>Token-Safe AI</b><span>AI assistance is optional and only runs when triggered by the user. Full employee rows are not sent automatically.</span></div>
     </div>
   </div>
 </div>
@@ -142,23 +149,48 @@ const PROTECTED_HINTS=['age','yrs','year','service','formula','check data','dupl
 const KEY_HINTS=['nik','personnel number','pers.no','employee id','emp id','no pegawai'];
 let S={projectName:'',projectType:'',steps:[],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};
 
-const DB_NAME='DeltaHubDB', STORE_NAME='autosave', AUTO_KEY='lastProject';
+const DB_NAME='DeltaHubDB', STORE_NAME='autosave', AUTO_KEY='lastProject', RECENT_KEY='recentProjects';
 let autosaveTimer=null;
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(STORE_NAME))db.createObjectStore(STORE_NAME)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbSet(key,value){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbDel(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).delete(key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 function serializeState(){const clone={...S,selected:[...S.selected]};clone._autosavedAt=new Date().toISOString();return clone}
-function hydrateState(obj){S=obj||S;S.selected=new Set(obj.selected||[]);S.steps=S.steps||[];S.accessUsers=S.accessUsers||[];S.currentUser=S.currentUser||'';S.lastApply=S.lastApply||null;S.lastApplied=S.lastApplied||0;S.lastDetected=S.lastDetected||0;S.lastDetectAt=S.lastDetectAt||null;S.lastSaveAt=S._autosavedAt||S.lastSaveAt||null;S.master=S.master||{name:'',data:[],cols:[]};S.ref=S.ref||{name:'',data:[],cols:[]};S.mappings=S.mappings||{};S.changes=S.changes||[];S.changelog=S.changelog||[];S.applyHistory=S.applyHistory||[];S.exceptions=S.exceptions||{errors:[],warnings:[]};return S}
-function autoSave(reason){if(!S||!S.projectName)return;clearTimeout(autosaveTimer);autosaveTimer=setTimeout(async()=>{try{const obj=serializeState();await idbSet(AUTO_KEY,obj);S.lastSaveAt=obj._autosavedAt;updateHealth();updateLandingRestore()}catch(e){console.warn('Autosave failed',e);toast('Autosave gagal. Klik Save Project JSON untuk backup.',true)}},250)}
-async function updateLandingRestore(){const box=document.getElementById('continue-box');if(!box)return;try{const obj=await idbGet(AUTO_KEY);if(!obj||!obj.projectName){box.classList.add('hidden');return}box.classList.remove('hidden');const saved=formatTime(obj._autosavedAt);const step=obj.steps?.[obj.activeStep||0]?.name||'-';box.innerHTML='<b>Continue Last Project</b><br>'+esc(obj.projectName)+'<br><span class="muted">Last autosaved: '+saved+' • Step: '+esc(step)+'</span><div class="continue-actions"><button class="btn btn-sm btn-primary" onclick="continueLastProject()">Continue Project</button><button class="btn btn-sm btn-danger" onclick="clearAutosave()">Clear Autosave</button></div>'}catch(e){console.warn(e)}}
-async function continueLastProject(){const obj=await idbGet(AUTO_KEY);if(!obj)return toast('Tidak ada autosave project',true);hydrateState(obj);showApp();toast('Project dipulihkan dari autosave')}
+function hydrateState(obj){S=obj||S;if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);S.selected=new Set(obj.selected||[]);S.steps=S.steps||[];S.accessUsers=S.accessUsers||[];S.currentUser=S.currentUser||'';S.lastApply=S.lastApply||null;S.lastApplied=S.lastApplied||0;S.lastDetected=S.lastDetected||0;S.lastDetectAt=S.lastDetectAt||null;S.lastSaveAt=S._autosavedAt||S.lastSaveAt||null;S.master=S.master||{name:'',data:[],cols:[]};S.ref=S.ref||{name:'',data:[],cols:[]};S.mappings=S.mappings||{};S.changes=S.changes||[];S.changelog=S.changelog||[];S.applyHistory=S.applyHistory||[];S.exceptions=S.exceptions||{errors:[],warnings:[]};return S}
+function ensureProjectId(){if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);return S.projectId}
+async function saveRecentProject(obj){
+  try{
+    if(!obj||!obj.projectName)return;
+    if(!obj.projectId)obj.projectId=ensureProjectId();
+    let list=await idbGet(RECENT_KEY)||[];
+    list=list.filter(x=>x&&x.projectId!==obj.projectId);
+    list.unshift({projectId:obj.projectId,projectName:obj.projectName,step:obj.steps?.[obj.activeStep||0]?.name||'-',updatedAt:obj._autosavedAt||new Date().toISOString(),snapshot:obj});
+    list=list.slice(0,10);
+    await idbSet(RECENT_KEY,list);
+  }catch(e){console.warn('Recent project save failed',e)}
+}
+function autoSave(reason){if(!S||!S.projectName)return;clearTimeout(autosaveTimer);autosaveTimer=setTimeout(async()=>{try{ensureProjectId();const obj=serializeState();await idbSet(AUTO_KEY,obj);await saveRecentProject(obj);S.lastSaveAt=obj._autosavedAt;updateHealth();updateLandingRestore()}catch(e){console.warn('Autosave failed',e);toast('Autosave gagal. Klik Save Project JSON untuk backup.',true)}},250)}
+async function updateLandingRestore(){
+  const box=document.getElementById('continue-box');if(!box)return;
+  try{
+    const list=await idbGet(RECENT_KEY)||[];
+    if(!list.length){box.classList.add('hidden');box.innerHTML='';return}
+    box.classList.remove('hidden');
+    box.innerHTML='<h4 style="margin-bottom:6px">Recent Projects</h4><div class="recent-list">'+list.map(x=>{
+      const saved=formatTime(x.updatedAt);const step=x.step||x.snapshot?.steps?.[x.snapshot?.activeStep||0]?.name||'-';
+      return '<div class="recent-item"><div class="recent-title">'+esc(x.projectName||'-')+'</div><div class="recent-meta">Last autosaved: '+saved+' • Step: '+esc(step)+'</div><div class="recent-actions"><button class="btn btn-sm btn-primary" onclick="openRecentProject(\''+esc(x.projectId)+'\')">Open</button><button class="btn btn-sm btn-soft-danger" onclick="deleteRecentProject(\''+esc(x.projectId)+'\')">Delete</button></div></div>'
+    }).join('')+'</div>';
+  }catch(e){console.warn(e)}
+}
+async function openRecentProject(projectId){const list=await idbGet(RECENT_KEY)||[];const item=list.find(x=>x.projectId===projectId);if(!item||!item.snapshot)return toast('Project history tidak ditemukan',true);hydrateState(item.snapshot);ensureProjectId();await idbSet(AUTO_KEY,serializeState());showApp();toast('Project dibuka dari Recent Projects')}
+async function deleteRecentProject(projectId){if(!confirm('Hapus project ini dari Recent Projects?'))return;let list=await idbGet(RECENT_KEY)||[];const item=list.find(x=>x.projectId===projectId);list=list.filter(x=>x.projectId!==projectId);await idbSet(RECENT_KEY,list);const last=await idbGet(AUTO_KEY);if(last&&last.projectId===projectId){await idbDel(AUTO_KEY)}updateLandingRestore();toast('Project history dihapus')}
+async function continueLastProject(){const obj=await idbGet(AUTO_KEY);if(!obj)return toast('Tidak ada autosave project',true);hydrateState(obj);ensureProjectId();showApp();toast('Project dipulihkan dari autosave')}
 async function clearAutosave(){if(!confirm('Hapus autosave project terakhir?'))return;await idbDel(AUTO_KEY);updateLandingRestore();toast('Autosave dihapus')}
 window.addEventListener('beforeunload',e=>{if(S&&S.projectName){autoSave('beforeunload');e.preventDefault();e.returnValue='DeltaHub project belum tentu tersimpan. Save Project JSON atau tunggu autosave selesai.'}});
 function toast(m,err){const t=document.getElementById('toast');t.textContent=m;t.style.background=err?'#991B1B':'#1A1916';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3300)}
 function openCreate(){document.getElementById('create-box').classList.remove('hidden');document.getElementById('create-empty').classList.add('hidden');renderTypes()}
 function renderTypes(){const box=document.getElementById('type-cards');box.innerHTML='';Object.keys(TYPES).forEach((t,i)=>{const d=document.createElement('div');d.className='type-card '+(i===0?'active':'');d.dataset.type=t;d.innerHTML='<b>'+t+'</b><span class="muted">'+TYPES[t].join(' → ')+'</span>';d.onclick=()=>{document.querySelectorAll('.type-card').forEach(x=>x.classList.remove('active'));d.classList.add('active')};box.appendChild(d)})}
-function createProject(){const name=document.getElementById('project-name').value.trim();if(!name)return toast('Isi Project Name dulu',true);S={projectName:name,projectType:'Data Reconciliation',steps:[{name:'Data Update',refName:'',selected:[],changes:[],applied:false}],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};showApp();autoSave('create')}
+function createProject(){const name=document.getElementById('project-name').value.trim();if(!name)return toast('Isi Project Name dulu',true);S={projectId:'p_'+Date.now()+'_'+Math.random().toString(16).slice(2),projectName:name,projectType:'Data Reconciliation',steps:[{name:'Data Update',refName:'',selected:[],changes:[],applied:false}],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};showApp();autoSave('create')}
 function showLanding(){document.getElementById('landing').classList.remove('hidden');document.getElementById('app').classList.add('hidden');updateLandingRestore()}
 function showApp(){document.getElementById('landing').classList.add('hidden');document.getElementById('app').classList.remove('hidden');refreshUI()}
 function refreshUI(){document.getElementById('app-title').textContent=S.projectName;document.getElementById('app-sub').textContent='Working Master flow • '+S.applied+' applied batch(es)';renderStepNav();renderTabs();renderAccess();setActiveStep(S.activeStep);renderHistory();renderExceptions();updateHealth();}
@@ -266,7 +298,7 @@ function renderExceptions(){
 function downloadExceptionReport(sev,idx){
   const ex=S.exceptions||emptyExceptionState(); const item=(sev==='error'?ex.errors:ex.warnings)[idx];
   if(!item)return toast('Exception tidak ditemukan',true);
-  const rows=(item.affectedRows||[]).map(r=>({NIK:r.NIK||r.key||'',Name:r.Name||r.name||''}));
+  const rows=(item.affectedRows||[]).map(r=>({NIK:r.NIK||r.key||'',Name:r.Name||r.name||'',Issue:item.title||'',Column:r.Column||'',Value:r.Value||''}));
   if(!rows.length)return toast('Tidak ada row untuk report ini',true);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Report');
   XLSX.writeFile(wb, safe(item.title||'Exception_Report')+'_'+dateStr()+'.xlsx');
@@ -285,9 +317,21 @@ function validateBeforeDetect(km,kr,selected){
   const conflictRows=[];
   Object.entries(groups).forEach(([k,arr])=>{
     if(arr.length<2)return;
-    let conflict=false;
-    selected.forEach(c=>{const refCol=(S.mappings&&S.mappings[c])||suggestRefCol(c); if(!refCol)return; const vals=[...new Set(arr.map(x=>normCompare(x.row[refCol])) )]; if(vals.length>1)conflict=true;});
-    if(conflict)arr.forEach(x=>conflictRows.push({NIK:k,Name:getNameValue(x.row),row:x.idx+2}));
+    const rowSignatures=arr.map(x=>{
+      const parts=[];
+      selected.forEach(c=>{const refCol=(S.mappings&&S.mappings[c])||suggestRefCol(c); if(refCol)parts.push(refCol+': '+String(x.row[refCol]??'').trim())});
+      return parts.join(' | ');
+    });
+    const unique=[...new Set(rowSignatures.map(v=>normCompare(v)))];
+    if(unique.length>1){
+      arr.forEach((x,idx)=>{
+        selected.forEach(c=>{
+          const refCol=(S.mappings&&S.mappings[c])||suggestRefCol(c); if(!refCol)return;
+          const vals=[...new Set(arr.map(y=>normCompare(y.row[refCol])))];
+          if(vals.length>1)conflictRows.push({NIK:k,Name:getNameValue(x.row),Column:refCol,Value:String(x.row[refCol]??''),row:x.idx+2});
+        })
+      })
+    }
   });
   if(conflictRows.length)errors.push(buildException('duplicate_reference_conflict','error','Conflicting Duplicate Key','Reference File: '+refName+' | Key Column: '+kr,'Same key appears multiple times with different values in the selected update columns.','DeltaHub cannot determine which record is correct.','Review duplicate records in the reference file and keep only the correct row, then upload again.',conflictRows));
   return {blocked:errors.length>0,errors,warnings};
