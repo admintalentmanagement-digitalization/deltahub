@@ -101,7 +101,20 @@
         <div class="section-head"><div><b>1. Working Master</b><div class="muted">File utama yang akan terus diperbarui sampai final.</div></div></div>
         <div class="section-body grid2">
           <div><div class="drop" id="drop-master" ondragover="over(event,this)" ondragleave="leave(this)" ondrop="dropFile(event,'master',this)"><input type="file" accept=".xlsx,.xls,.csv" onchange="pickFile(event,'master')"><div style="font-size:30px">📘</div><b>Upload Working Master</b><span class="muted">Excel / CSV</span></div><div class="pill hidden" id="pill-master"></div></div>
-          <div class="warn"><b>Catatan:</b><br>Working Master akan disimpan di browser selama sesi ini. Klik <b>Save Project JSON</b> kalau mau lanjut besok. Klik <b>Download Final Excel</b> setelah semua update selesai.</div>
+          <div class="warn"><b>Catatan:</b><br>
+Working Master akan disimpan di browser selama sesi ini.<br>
+Klik <b>Save Project JSON</b> jika ingin melanjutkan project di lain waktu.<br>
+Klik <b>Download Final Excel</b> setelah seluruh update selesai.
+<hr style="margin:10px 0;border:0;border-top:1px solid #bfdbfe">
+<b>Aturan Working Master:</b>
+<ul style="margin:8px 0 0 18px;padding:0;line-height:1.55">
+  <li>Working Master menjadi base data project dan akan dikunci setelah diupload.</li>
+  <li>Untuk menggunakan master berbeda, pastikan seluruh update sudah di-apply ke Working Master dan Final Excel sudah di-download, kemudian buat Project Baru.</li>
+  <li>Jika ingin menambah kolom baru atau mengubah nama kolom, lakukan pada file master hasil download lalu buat Project Baru.</li>
+  <li>Kolom yang akan diupdate harus sudah tersedia di Working Master.</li>
+  <li>Nama kolom Working Master dan Reference harus sama persis.</li>
+  <li>Duplicate key dengan nilai berbeda tidak diperbolehkan.</li>
+</ul></div>
         </div>
       </section>
 
