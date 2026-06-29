@@ -28,12 +28,24 @@
 .exception-actions .btn{background:#fff}
 .exception-empty{background:#eef7ff;color:#0f4ea8;border:1px solid #cfe3ff;border-radius:10px;padding:10px 12px;font-size:12px}
 .feature-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}.feature-card{background:#eef7ff;border:1px solid #cfe3ff;border-radius:12px;padding:12px;color:#0f4ea8;font-size:12px;min-height:104px}.feature-card b{display:block;font-size:13px;margin-bottom:5px;color:#0b3f91}.feature-card span{color:#245f9f}.recent-list{display:grid;gap:8px;margin-top:10px}.recent-item{background:#eef7ff;border:1px solid #cfe3ff;border-radius:10px;padding:10px 12px}.recent-title{font-weight:800;color:#0b3f91}.recent-meta{font-size:12px;color:#6b6860;margin-top:2px}.recent-actions{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}.btn-soft-danger{background:#fee2e2;color:#991b1b;border-color:#fecaca}.btn-soft-danger:hover{background:#fecaca}@media(max-width:900px){.feature-grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.feature-grid{grid-template-columns:1fr}}
+
+.column-tools{display:grid;gap:10px;margin-bottom:12px}
+.selected-counter{background:#eef2ff;color:#1b4fd8;border:1px solid #c7d2fe;border-radius:99px;padding:6px 10px;font-size:12px;font-weight:800}
+.selected-summary{background:#eef7ff;color:#0f4ea8;border:1px solid #cfe3ff;border-radius:10px;padding:10px 12px;font-size:12px}
+.selected-summary-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.selected-mini-chip{background:#1b4fd8;color:#fff;border-radius:99px;padding:4px 8px;font-size:11px;font-weight:700}
+.attention{background:#FEF2F2!important;color:#991B1B!important;border-color:#FCA5A5!important}
+.attention b,.attention strong{color:#991B1B!important}
+.exception-card{overflow-wrap:anywhere;word-break:break-word;max-width:100%}
+.exception-meta div{overflow-wrap:anywhere;word-break:break-word}
+.side{min-width:0}.card{min-width:0}
+
 </style>
 </head>
 <body>
 <nav>
   <div class="brand"><div class="logo">Δ</div><div><div class="title">DeltaHub</div><div class="sub">Intelligent Data Reconciliation Platform</div></div></div>
-  <div class="row"><span class="badge">Token-safe DeepSeek mode</span><button class="btn btn-sm" onclick="showLanding()">Home</button></div>
+  <div class="row"><span class="badge">Token-safe DeepSeek mode</span><button class="btn btn-sm" onclick="saveProjectJson()">Save Project JSON</button><button class="btn btn-sm" onclick="goHomeSafe()">Home</button></div>
 </nav>
 
 <div class="wrap" id="landing">
@@ -138,8 +150,29 @@ Klik <b>Download Final Excel</b> setelah seluruh update selesai.
       </section>
 
       <section class="card" style="margin-bottom:14px">
-        <div class="section-head"><div><b>4. Select Columns to Update</b><div class="muted">Pilih kolom dari Working Master. Sistem hanya update kolom yang dipilih.</div></div><div class="row"><button class="btn btn-sm" onclick="selectRecommended()">Select Recommended</button><button class="btn btn-sm" onclick="clearColumns()">Clear</button></div></div>
-        <div class="section-body"><div id="col-empty" class="muted">Upload Working Master dan Reference dulu.</div><div class="chips hidden" id="columns"></div><div id="mapping-box" class="hidden" style="margin-top:16px;border-top:1px solid #e4e2db;padding-top:14px"></div></div>
+        <div class="section-head">
+          <div>
+            <b>4. Select Columns to Update</b>
+            <div class="muted">Pilih kolom dari Working Master. Sistem hanya update kolom yang dipilih.</div>
+          </div>
+          <div class="row">
+            <span class="selected-counter" id="selected-counter">0 selected</span>
+            <button class="btn btn-sm" onclick="selectRecommended()">Select Recommended</button>
+            <button class="btn btn-sm" onclick="clearColumns()">Clear</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div id="col-empty" class="muted">Upload Working Master dan Reference dulu.</div>
+          <div id="column-tools" class="column-tools hidden">
+            <input class="input" id="column-search" placeholder="Search column, contoh: PAT, Position, Talent" oninput="refreshColumns()" />
+            <div class="selected-summary" id="selected-summary">
+              <b>Selected Columns</b>
+              <div class="muted">Belum ada kolom dipilih.</div>
+            </div>
+          </div>
+          <div class="chips hidden" id="columns"></div>
+          <div id="mapping-box" class="hidden" style="margin-top:16px;border-top:1px solid #e4e2db;padding-top:14px"></div>
+        </div>
       </section>
 
       <section class="card" style="margin-bottom:14px">
@@ -214,6 +247,16 @@ function openCreate(){document.getElementById('create-box').classList.remove('hi
 function renderTypes(){const box=document.getElementById('type-cards');box.innerHTML='';Object.keys(TYPES).forEach((t,i)=>{const d=document.createElement('div');d.className='type-card '+(i===0?'active':'');d.dataset.type=t;d.innerHTML='<b>'+t+'</b><span class="muted">'+TYPES[t].join(' → ')+'</span>';d.onclick=()=>{document.querySelectorAll('.type-card').forEach(x=>x.classList.remove('active'));d.classList.add('active')};box.appendChild(d)})}
 function createProject(){const name=document.getElementById('project-name').value.trim();if(!name)return toast('Isi Project Name dulu',true);S={projectId:'p_'+Date.now()+'_'+Math.random().toString(16).slice(2),projectName:name,projectType:'Data Reconciliation',steps:[{name:'Data Update',refName:'',selected:[],changes:[],applied:false}],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};showApp();autoSave('create')}
 function showLanding(){document.getElementById('landing').classList.remove('hidden');document.getElementById('app').classList.add('hidden');updateLandingRestore()}
+function goHomeSafe(){
+  const appVisible=!document.getElementById('app').classList.contains('hidden');
+  const hasProject=!!(S.projectName||S.master?.data?.length||S.ref?.data?.length||S.changes?.length);
+  if(appVisible&&hasProject){
+    autoSave('home');
+    const ok=confirm('Sebelum ke Home, pastikan Project JSON sudah disimpan jika ingin lanjut nanti. Klik OK untuk ke Home, atau Cancel untuk tetap di project.');
+    if(!ok)return;
+  }
+  showLanding();
+}
 function showApp(){document.getElementById('landing').classList.add('hidden');document.getElementById('app').classList.remove('hidden');refreshUI()}
 function refreshUI(){document.getElementById('app-title').textContent=S.projectName;document.getElementById('app-sub').textContent='Working Master flow • '+S.applied+' applied batch(es)';renderStepNav();renderTabs();renderAccess();setActiveStep(S.activeStep);renderHistory();renderExceptions();updateHealth();updateMasterLock();}
 function renderStepNav(){const list=document.getElementById('step-list');list.innerHTML='';S.steps.forEach((s,i)=>{const d=document.createElement('div');d.className='step '+(i===S.activeStep?'active ':'')+(s.applied?'done':'');d.innerHTML='<span class="dot"></span><div><b>'+s.name+'</b><br><small>'+(s.applied?'Applied':(s.refName||'Waiting reference'))+'</small></div>';d.onclick=()=>setActiveStep(i);list.appendChild(d)});document.getElementById('nav-master').className='step '+(S.master.data.length?'done':'active');document.getElementById('master-small').textContent=S.master.name||'Belum ada file'}
@@ -271,7 +314,6 @@ function isMappingAllowed(target,source){
 }
 function mappingMismatchRows(km,kr,selected){
   const rows=[];
-  if(km&&kr&&headerKey(km)!==headerKey(kr)) rows.push({NIK:'',Name:'',Column:'Key Column',Value:'Master: '+km+' | Reference: '+kr});
   selected.forEach(c=>{
     const refCol=(S.mappings&&S.mappings[c])||suggestRefCol(c);
     if(refCol&&!isMappingAllowed(c,refCol)) rows.push({NIK:'',Name:'',Column:c,Value:c+' ← '+refCol});
@@ -295,6 +337,7 @@ function updateColumnSafety(){
       warn.innerHTML='<b>⚠️ Perhatian sebelum Detect Changes</b><br>Reference aktif: <strong>'+esc(S.ref.name||'-')+'</strong><br>Pilih kolom target yang benar dulu. Contoh: file PAT 2024 → pilih <strong>PAT 2024</strong>.<br><strong>Catatan:</strong> Setelah klik Apply, perubahan akan menulis langsung ke Working Master aktif. Detect Changes dikunci sampai kolom dipilih.';
     }
   }
+  updateSelectedSummary();
   if(detect){
     detect.disabled=!hasRef||!hasCols||hasMismatch;
     detect.textContent=hasMismatch?'Fix mapping first':(hasCols?'🔍 Detect Changes':'Pilih kolom dulu');
@@ -304,26 +347,47 @@ function updateColumnSafety(){
 function refreshColumns(){
   const wrap=document.getElementById('columns'),empty=document.getElementById('col-empty');
   const mapBox=document.getElementById('mapping-box');
+  const tools=document.getElementById('column-tools');
+  const search=(document.getElementById('column-search')?.value||'').toLowerCase().trim();
   wrap.innerHTML=''; if(mapBox)mapBox.innerHTML='';
-  if(!S.master.cols.length||!S.ref.cols.length){empty.classList.remove('hidden');wrap.classList.add('hidden');if(mapBox)mapBox.classList.add('hidden');updateColumnSafety();return}
-  empty.classList.add('hidden');wrap.classList.remove('hidden');
+  if(!S.master.cols.length||!S.ref.cols.length){
+    empty.classList.remove('hidden');wrap.classList.add('hidden');if(tools)tools.classList.add('hidden');if(mapBox)mapBox.classList.add('hidden');updateSelectedSummary();updateColumnSafety();return
+  }
+  empty.classList.add('hidden');wrap.classList.remove('hidden');if(tools)tools.classList.remove('hidden');
   const refSet=new Set(S.ref.cols.map(x=>String(x).toLowerCase()));
-  S.master.cols.forEach(c=>{
+  S.master.cols.filter(c=>!search||String(c).toLowerCase().includes(search)).forEach(c=>{
     const chip=document.createElement('div');const protectedCol=isProtected(c);const suggested=suggestRefCol(c);const recommended=!!suggested||refSet.has(String(c).toLowerCase());
     chip.className='chip '+(S.selected.has(c)?'selected ':'')+(protectedCol?'disabled ':'')+(recommended?'recommended':'');
     const kmSel=document.getElementById('key-master')?.value;chip.textContent=c+(protectedCol?' • protected':(c===kmSel?' • key':(S.selected.has(c)?' • selected':'')));
-    if(!protectedCol)chip.onclick=()=>{chip.classList.toggle('selected');chip.classList.contains('selected')?S.selected.add(c):S.selected.delete(c);S.steps[S.activeStep].selected=[...S.selected];renderMappings();updateColumnSafety();updateHealth();autoSave('select')};
+    if(!protectedCol)chip.onclick=()=>{chip.classList.toggle('selected');chip.classList.contains('selected')?S.selected.add(c):S.selected.delete(c);S.steps[S.activeStep].selected=[...S.selected];updateSelectedSummary();renderMappings();updateColumnSafety();updateHealth();autoSave('select')};
     wrap.appendChild(chip)
   });
+  updateSelectedSummary();
   renderMappings();
   updateColumnSafety();
 }
+
+function updateSelectedSummary(){
+  const counter=document.getElementById('selected-counter');
+  const summary=document.getElementById('selected-summary');
+  const km=document.getElementById('key-master')?.value||'';
+  const selected=[...(S.selected||new Set())].filter(c=>c!==km&&!isProtected(c));
+  if(counter)counter.textContent=selected.length+' selected';
+  if(summary){
+    if(!selected.length){
+      summary.innerHTML='<b>Selected Columns</b><div class="muted">Belum ada kolom dipilih.</div>';
+    }else{
+      summary.innerHTML='<b>Selected Columns ('+selected.length+')</b><div class="selected-summary-list">'+selected.map(c=>'<span class="selected-mini-chip">'+esc(c)+'</span>').join('')+'</div>';
+    }
+  }
+}
+
 function renderMappings(){
   const mapBox=document.getElementById('mapping-box'); if(!mapBox)return;
   const targets=[...S.selected].filter(c=>!isProtected(c));
   if(!targets.length||!S.ref.cols.length){mapBox.classList.add('hidden');mapBox.innerHTML='';updateColumnSafety();return}
   mapBox.classList.remove('hidden');
-  let html='<h3 style="margin-bottom:6px">Column Mapping</h3><div class="attention"><b>⚠️ Column name must match</b><br>Untuk menghindari salah update, nama kolom target dan source harus sama. Contoh aman: <strong>Talent Class ← Talent Class</strong>, <strong>Name ← Name</strong>, <strong>NIK ← NIK</strong>.<br>Exception khusus PAT: <strong>PAT 2025 ← PAT</strong>, <strong>PAT 2024 ← PAT</strong>, <strong>PAT 2023 ← PAT</strong>.</div>';
+  let html='<h3 style="margin-bottom:6px">Column Mapping</h3><div class="attention"><b>🔴 Column name must match</b><br>Untuk menghindari salah update, nama kolom target dan source harus sama. Contoh aman: <strong>Talent Class ← Talent Class</strong>, <strong>Name ← Name</strong>, <strong>NIK ← NIK</strong>.<br>Exception khusus PAT: <strong>PAT 2025 ← PAT</strong>, <strong>PAT 2024 ← PAT</strong>, <strong>PAT 2023 ← PAT</strong>.</div>';
   const summary=[];
   targets.forEach(c=>{
     if(!S.mappings)S.mappings={};
@@ -344,9 +408,9 @@ function renderMappings(){
   mapBox.innerHTML=html;
   updateColumnSafety();
 }
-function setMapping(target,source){if(!S.mappings)S.mappings={};S.mappings[target]=source;renderMappings();updateColumnSafety();autoSave('mapping')}
-function selectRecommended(){S.master.cols.forEach(c=>{if(suggestRefCol(c)&&!isProtected(c))S.selected.add(c)});S.steps[S.activeStep].selected=[...S.selected];refreshColumns();updateColumnSafety();updateHealth();autoSave('selectRecommended');toast('Kolom yang punya mapping dipilih')}
-function clearColumns(){S.selected.clear();S.steps[S.activeStep].selected=[];refreshColumns();updateColumnSafety();updateHealth();autoSave('clearColumns')}
+function setMapping(target,source){if(!S.mappings)S.mappings={};S.mappings[target]=source;updateSelectedSummary();renderMappings();updateColumnSafety();autoSave('mapping')}
+function selectRecommended(){S.master.cols.forEach(c=>{if(suggestRefCol(c)&&!isProtected(c))S.selected.add(c)});S.steps[S.activeStep].selected=[...S.selected];updateSelectedSummary();refreshColumns();updateColumnSafety();updateHealth();autoSave('selectRecommended');toast('Kolom yang punya mapping dipilih')}
+function clearColumns(){S.selected.clear();S.steps[S.activeStep].selected=[];updateSelectedSummary();refreshColumns();updateColumnSafety();updateHealth();autoSave('clearColumns')}
 
 function emptyExceptionState(){return {errors:[],warnings:[]}}
 function getNameValue(row){return row?.Name||row?.Nama||row?.['Employee Name']||row?.['Nama Karyawan']||''}
@@ -441,7 +505,7 @@ function detectDelta(){
   if(refNotFound.length)warnings.push(buildException('reference_not_found','warning','Reference Not Found in Master','Reference File: '+(S.ref.name||'-')+' | Working Master: '+(S.master.name||'-'),'Records exist in reference but cannot be found in working master.','These records will not be updated.','Review these records and validate key consistency.',refNotFound));
   if(masterNotFound.length)warnings.push(buildException('master_not_found','warning','Master Not Found in Reference','Working Master: '+(S.master.name||'-')+' | Reference File: '+(S.ref.name||'-'),'Records exist in working master but cannot be found in reference.','No update will be applied to these records.','Review whether the employee is expected in the source file.',masterNotFound));
   setExceptions([],warnings);
-  S.changes=changes;S.steps[S.activeStep].changes=changes;S.steps[S.activeStep].applied=false;S.applied=S.steps.filter(x=>x.applied).length;S.lastDetected=changes.filter(x=>x.status==='modified').length;S.lastDetectAt=new Date().toISOString();S.lastApply=null;S.lastApplied=0;renderDelta(same);renderStepNav();renderTabs();updateHealth();autoSave('detect');toast(changes.length.toLocaleString()+' changes detected')}
+  S.changes=changes;S.steps[S.activeStep].changes=changes;S.steps[S.activeStep].applied=false;S.applied=S.steps.filter(x=>x.applied).length;S.lastDetected=changes.filter(x=>x.status==='modified').length;S.lastDetectAt=new Date().toISOString();S.lastApply=null;S.lastApplied=0;renderDelta(same);renderStepNav();renderTabs();updateHealth();autoSave('detect');const mod=changes.filter(x=>x.status==='modified').length;const nw=changes.filter(x=>x.status==='new').length;const off=changes.filter(x=>x.status==='not_in_reference').length;toast('Detect complete: '+mod.toLocaleString()+' updates, '+nw.toLocaleString()+' new NIK, '+off.toLocaleString()+' not in reference')}
 function renderDelta(sameOverride){const ch=S.changes||[];document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';document.getElementById('apply-btn').disabled=true;updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');ap.disabled=false;ap.textContent='✓ Apply to Working Master';updateColumnSafety()}
 function esc(v){return String(v).replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
 
