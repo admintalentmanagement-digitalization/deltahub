@@ -45,13 +45,12 @@
 .logic-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .logic-tab{border:1px solid #d7d2c8;background:#fff;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer}
 .logic-tab.active{background:#1b4fd8;color:#fff;border-color:#1b4fd8}
-.logic-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
 .logic-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end}
 .logic-field label{display:block;font-size:12px;font-weight:800;color:#5b5560;margin-bottom:5px}
 .logic-preview{background:#ecfdf5;border:1px solid #86efac;color:#166534;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:700;margin-top:10px}
 .logic-warning{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:700;margin-top:10px}
 .logic-badge{display:inline-block;background:#eef2ff;color:#1b4fd8;border:1px solid #c7d2fe;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:800;margin-left:5px}
-@media(max-width:900px){.logic-grid,.logic-grid-3{grid-template-columns:1fr}}
+@media(max-width:900px){.logic-grid-3{grid-template-columns:1fr}}
 
 </style>
 </head>
@@ -215,7 +214,7 @@ Klik <b>Download Final Excel</b> setelah seluruh update selesai.
 const TYPES={Succession:['Employee Update','Talent Update','PAT Update'],PAT:['Employee Update','PAT Update'], 'Talent Mapping':['Employee Update','Talent Update'], Custom:['Custom Update']};
 const PROTECTED_HINTS=['age','yrs','year','service','formula','check data','duplicate','range service','has successor'];
 const KEY_HINTS=['nik','personnel number','pers.no','employee id','emp id','no pegawai'];
-let S={projectName:'',projectType:'',steps:[],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};
+let S={projectName:'',projectType:'',steps:[],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},rules:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};
 
 const DB_NAME='DeltaHubDB', STORE_NAME='autosave', AUTO_KEY='lastProject', RECENT_KEY='recentProjects';
 let autosaveTimer=null;
@@ -224,7 +223,7 @@ async function idbSet(key,value){const db=await openDB();return new Promise((res
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbDel(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).delete(key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 function serializeState(){const clone={...S,selected:[...S.selected]};clone._autosavedAt=new Date().toISOString();return clone}
-function hydrateState(obj){S=obj||S;if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);S.selected=new Set(obj.selected||[]);S.steps=S.steps||[];S.accessUsers=S.accessUsers||[];S.currentUser=S.currentUser||'';S.lastApply=S.lastApply||null;S.lastApplied=S.lastApplied||0;S.lastDetected=S.lastDetected||0;S.lastDetectAt=S.lastDetectAt||null;S.lastSaveAt=S._autosavedAt||S.lastSaveAt||null;S.master=S.master||{name:'',data:[],cols:[]};S.ref=S.ref||{name:'',data:[],cols:[]};S.mappings=S.mappings||{};S.changes=S.changes||[];S.changelog=S.changelog||[];S.applyHistory=S.applyHistory||[];S.exceptions=S.exceptions||{errors:[],warnings:[]};return S}
+function hydrateState(obj){S=obj||S;if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);S.selected=new Set(obj.selected||[]);S.steps=S.steps||[];S.accessUsers=S.accessUsers||[];S.currentUser=S.currentUser||'';S.lastApply=S.lastApply||null;S.lastApplied=S.lastApplied||0;S.lastDetected=S.lastDetected||0;S.lastDetectAt=S.lastDetectAt||null;S.lastSaveAt=S._autosavedAt||S.lastSaveAt||null;S.master=S.master||{name:'',data:[],cols:[]};S.ref=S.ref||{name:'',data:[],cols:[]};S.mappings=S.mappings||{};S.rules=S.rules||{};S.changes=S.changes||[];S.changelog=S.changelog||[];S.applyHistory=S.applyHistory||[];S.exceptions=S.exceptions||{errors:[],warnings:[]};return S}
 function ensureProjectId(){if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);return S.projectId}
 async function saveRecentProject(obj){
   try{
@@ -258,7 +257,7 @@ window.addEventListener('beforeunload',e=>{if(S&&S.projectName){autoSave('before
 function toast(m,err){const t=document.getElementById('toast');t.textContent=m;t.style.background=err?'#991B1B':'#1A1916';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3300)}
 function openCreate(){document.getElementById('create-box').classList.remove('hidden');document.getElementById('create-empty').classList.add('hidden');renderTypes()}
 function renderTypes(){const box=document.getElementById('type-cards');box.innerHTML='';Object.keys(TYPES).forEach((t,i)=>{const d=document.createElement('div');d.className='type-card '+(i===0?'active':'');d.dataset.type=t;d.innerHTML='<b>'+t+'</b><span class="muted">'+TYPES[t].join(' → ')+'</span>';d.onclick=()=>{document.querySelectorAll('.type-card').forEach(x=>x.classList.remove('active'));d.classList.add('active')};box.appendChild(d)})}
-function createProject(){const name=document.getElementById('project-name').value.trim();if(!name)return toast('Isi Project Name dulu',true);S={projectId:'p_'+Date.now()+'_'+Math.random().toString(16).slice(2),projectName:name,projectType:'Data Reconciliation',steps:[{name:'Data Update',refName:'',selected:[],changes:[],applied:false}],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};showApp();autoSave('create')}
+function createProject(){const name=document.getElementById('project-name').value.trim();if(!name)return toast('Isi Project Name dulu',true);S={projectId:'p_'+Date.now()+'_'+Math.random().toString(16).slice(2),projectName:name,projectType:'Data Reconciliation',steps:[{name:'Data Update',refName:'',selected:[],changes:[],applied:false}],activeStep:0,master:{name:'',data:[],cols:[]},ref:{name:'',data:[],cols:[]},selected:new Set(),mappings:{},rules:{},changes:[],changelog:[],applyHistory:[],applied:0,accessUsers:[],currentUser:'',lastApply:null,lastApplied:0,lastDetected:0,lastDetectAt:null,lastSaveAt:null,exceptions:{errors:[],warnings:[]}};showApp();autoSave('create')}
 function showLanding(){document.getElementById('landing').classList.remove('hidden');document.getElementById('app').classList.add('hidden');updateLandingRestore()}
 function goHomeSafe(){
   const appVisible=!document.getElementById('app').classList.contains('hidden');
@@ -325,17 +324,450 @@ function isPatSpecialMapping(target,source){
 function isMappingAllowed(target,source){
   return headerKey(target)===headerKey(source) || isPatSpecialMapping(target,source);
 }
+
+function jsEsc(s){return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ')}
+function getRule(target){
+  if(!S.rules)S.rules={};
+  if(!S.rules[target]){
+    S.rules[target]={mode:'copy',source:(S.mappings&&S.mappings[target])||suggestRefCol(target)||''};
+  }
+  return S.rules[target];
+}
+function setRuleMode(target,mode){
+  const r=getRule(target);
+  r.mode=mode;
+  if(mode==='copy'){
+    r.source=r.source||S.mappings?.[target]||suggestRefCol(target)||S.ref.cols[0]||'';
+    S.mappings[target]=r.source;
+  }else{
+    r.logicType=r.logicType||'IF_KEY_FOUND';
+    r.referenceKey=r.referenceKey||document.getElementById('key-ref')?.value||S.ref.cols[0]||'';
+    r.outputValue=(r.outputValue!==undefined)?r.outputValue:'Active Jun26';
+  }
+  S.rules[target]=r;
+  renderMappings();updateColumnSafety();autoSave('logicMode');
+}
+function updateRule(target,patch){
+  const r=getRule(target);
+  Object.assign(r,patch);
+  S.rules[target]=r;
+  if(r.mode==='copy'&&r.source)S.mappings[target]=r.source;
+  renderMappings();updateColumnSafety();autoSave('logicRule');
+}
+function logicOutputValue(rule){
+  if(rule.logicType==='TODAY')return new Date().toISOString().slice(0,10);
+  if(rule.logicType==='TIMESTAMP')return new Date().toLocaleString('id-ID');
+  return String(rule.outputValue??'');
+}
+function isLogicValid(target){
+  const r=getRule(target);
+  if(r.mode!=='logic')return false;
+  if(!r.logicType)return false;
+  if(r.logicType==='TODAY'||r.logicType==='TIMESTAMP')return true;
+  if(r.logicType==='SET_FIXED_VALUE')return String(r.outputValue??'').length>0;
+  if(r.logicType==='IF_KEY_FOUND'||r.logicType==='IF_KEY_NOT_FOUND')return !!(r.referenceKey&&String(r.outputValue??'').length>0);
+  return false;
+}
+function logicDescription(target){
+  const r=getRule(target),out=logicOutputValue(r);
+  if(r.logicType==='IF_KEY_FOUND')return target+' ← Logic: IF Reference.'+r.referenceKey+' found → '+out;
+  if(r.logicType==='IF_KEY_NOT_FOUND')return target+' ← Logic: IF Reference.'+r.referenceKey+' not found → '+out;
+  if(r.logicType==='SET_FIXED_VALUE')return target+' ← Fixed Value → '+out;
+  if(r.logicType==='TODAY')return target+' ← Today() → '+out;
+  if(r.logicType==='TIMESTAMP')return target+' ← Timestamp() → '+out;
+  return target+' ← Logic Mapping';
+}
+function renderLogicPanel(target){
+  const r=getRule(target);
+  const q=jsEsc(target);
+  const logicType=r.logicType||'IF_KEY_FOUND';
+  const refOptions=S.ref.cols.map(c=>'<option value="'+esc(c)+'" '+(r.referenceKey===c?'selected':'')+'>'+esc(c)+'</option>').join('');
+  const outputDisabled=(logicType==='TODAY'||logicType==='TIMESTAMP')?'disabled':'';
+  const outputValue=(logicType==='TODAY'||logicType==='TIMESTAMP')?logicOutputValue(r):(r.outputValue??'');
+  let html='<div class="logic-panel">';
+  html+='<div class="logic-tabs">';
+  html+='<button type="button" class="logic-tab '+(r.mode!=='logic'?'active':'')+'" onclick="setRuleMode(\''+q+'\',\'copy\')">Copy Column</button>';
+  html+='<button type="button" class="logic-tab '+(r.mode==='logic'?'active':'')+'" onclick="setRuleMode(\''+q+'\',\'logic\')">Logic Mapping</button>';
+  html+='</div>';
+  if(r.mode==='logic'){
+    html+='<div class="logic-grid-3">';
+    html+='<div class="logic-field"><label>Logic Type</label><select class="input" onchange="updateRule(\''+q+'\',{logicType:this.value})">';
+    html+='<option value="IF_KEY_FOUND" '+(logicType==='IF_KEY_FOUND'?'selected':'')+'>IF Key Found</option>';
+    html+='<option value="IF_KEY_NOT_FOUND" '+(logicType==='IF_KEY_NOT_FOUND'?'selected':'')+'>IF Key NOT Found</option>';
+    html+='<option value="SET_FIXED_VALUE" '+(logicType==='SET_FIXED_VALUE'?'selected':'')+'>Set Fixed Value</option>';
+    html+='<option value="TODAY" '+(logicType==='TODAY'?'selected':'')+'>Today()</option>';
+    html+='<option value="TIMESTAMP" '+(logicType==='TIMESTAMP'?'selected':'')+'>Timestamp()</option>';
+    html+='</select></div>';
+    html+='<div class="logic-field"><label>Reference Key / Condition Column</label><select class="input" onchange="updateRule(\''+q+'\',{referenceKey:this.value})">'+refOptions+'</select></div>';
+    html+='<div class="logic-field"><label>Output Value</label><input class="input" '+outputDisabled+' value="'+esc(outputValue)+'" placeholder="Contoh: Active Jun26" oninput="updateRule(\''+q+'\',{outputValue:this.value})" /></div>';
+    html+='</div>';
+    html+=isLogicValid(target)?'<div class="logic-preview">✅ Valid Logic Mapping<br>'+esc(logicDescription(target))+'</div>':'<div class="logic-warning">⚠️ Lengkapi Logic Mapping sebelum Detect Changes.</div>';
+  }
+  html+='</div>';
+  return html;
+}
+function selectedTargets(){
+  const km=document.getElementById('key-master')?.value||'';
+  return [...(S.selected||new Set())].filter(c=>c!==km&&!isProtected(c));
+}
+
 function mappingMismatchRows(km,kr,selected){
   const rows=[];
   selected.forEach(c=>{
     const r=getRule(c);
     if(r.mode==='logic'){
-      if(!isLogicValid(c)) rows.push({NIK:'',Name:'',Column:c,Value:'Incomplete Logic Mapping'});
+      if(!isLogicValid(c))rows.push({NIK:'',Name:'',Column:c,Value:'Incomplete Logic Mapping'});
     }else{
-      const src=r.source||S.mappings?.[c]||suggestRefCol(c)||'';
-      if(!isAllowedMapping(c,src)) rows.push({NIK:'',Name:'',Column:c,Value:'Mapped to '+src});
+      const refCol=r.source||S.mappings?.[c]||suggestRefCol(c);
+      if(refCol&&!isMappingAllowed(c,refCol))rows.push({NIK:'',Name:'',Column:c,Value:c+' ← '+refCol});
     }
   });
   return rows;
 }
->
+
+function updateColumnSafety(){
+  const warn=document.getElementById('column-warning');
+  const detect=document.getElementById('detect-btn');
+  const hasRef=!!(S.ref&&S.ref.data&&S.ref.data.length);
+  const hasCols=!!(S.selected&&S.selected.size);
+  const km=document.getElementById('key-master')?.value||'';
+  const kr=document.getElementById('key-ref')?.value||'';
+  const selected=[...(S.selected||new Set())].filter(c=>c!==km&&!isProtected(c));
+  const mismatch=(hasRef&&hasCols)?mappingMismatchRows(km,kr,selected):[];
+  const hasMismatch=mismatch.length>0;
+  if(warn){
+    warn.classList.toggle('hidden',!hasRef||hasCols);
+    if(hasRef&&!hasCols){
+      warn.innerHTML='<b>⚠️ Perhatian sebelum Detect Changes</b><br>Reference aktif: <strong>'+esc(S.ref.name||'-')+'</strong><br>Pilih kolom target yang benar dulu. Contoh: file PAT 2024 → pilih <strong>PAT 2024</strong>.<br><strong>Catatan:</strong> Setelah klik Apply, perubahan akan menulis langsung ke Working Master aktif. Detect Changes dikunci sampai kolom dipilih.';
+    }
+  }
+  updateSelectedSummary();
+  if(detect){
+    detect.disabled=!hasRef||!hasCols||hasMismatch;
+    detect.textContent=hasMismatch?'Fix mapping first':(hasCols?'🔍 Detect Changes':'Pilih kolom dulu');
+    detect.title=hasMismatch?'Cannot detect changes. Fix column mapping first.':'';
+  }
+}
+function refreshColumns(){
+  const wrap=document.getElementById('columns'),empty=document.getElementById('col-empty');
+  const mapBox=document.getElementById('mapping-box');
+  const tools=document.getElementById('column-tools');
+  const search=(document.getElementById('column-search')?.value||'').toLowerCase().trim();
+  wrap.innerHTML=''; if(mapBox)mapBox.innerHTML='';
+  if(!S.master.cols.length||!S.ref.cols.length){
+    empty.classList.remove('hidden');wrap.classList.add('hidden');if(tools)tools.classList.add('hidden');if(mapBox)mapBox.classList.add('hidden');updateSelectedSummary();updateColumnSafety();return
+  }
+  empty.classList.add('hidden');wrap.classList.remove('hidden');if(tools)tools.classList.remove('hidden');
+  const refSet=new Set(S.ref.cols.map(x=>String(x).toLowerCase()));
+  S.master.cols.filter(c=>!search||String(c).toLowerCase().includes(search)).forEach(c=>{
+    const chip=document.createElement('div');const protectedCol=isProtected(c);const suggested=suggestRefCol(c);const recommended=!!suggested||refSet.has(String(c).toLowerCase());
+    chip.className='chip '+(S.selected.has(c)?'selected ':'')+(protectedCol?'disabled ':'')+(recommended?'recommended':'');
+    const kmSel=document.getElementById('key-master')?.value;chip.textContent=c+(protectedCol?' • protected':(c===kmSel?' • key':(S.selected.has(c)?' • selected':'')));
+    if(!protectedCol)chip.onclick=()=>{chip.classList.toggle('selected');chip.classList.contains('selected')?S.selected.add(c):S.selected.delete(c);S.steps[S.activeStep].selected=[...S.selected];updateSelectedSummary();renderMappings();updateColumnSafety();updateHealth();autoSave('select')};
+    wrap.appendChild(chip)
+  });
+  updateSelectedSummary();
+  renderMappings();
+  updateColumnSafety();
+}
+
+function updateSelectedSummary(){
+  const counter=document.getElementById('selected-counter');
+  const summary=document.getElementById('selected-summary');
+  const km=document.getElementById('key-master')?.value||'';
+  const selected=[...(S.selected||new Set())].filter(c=>c!==km&&!isProtected(c));
+  if(counter)counter.textContent=selected.length+' selected';
+  if(summary){
+    if(!selected.length){
+      summary.innerHTML='<b>Selected Columns</b><div class="muted">Belum ada kolom dipilih.</div>';
+    }else{
+      summary.innerHTML='<b>Selected Columns ('+selected.length+')</b><div class="selected-summary-list">'+selected.map(c=>'<span class="selected-mini-chip">'+esc(c)+'</span>').join('')+'</div>';
+    }
+  }
+}
+
+function renderMappings(){
+  const mapBox=document.getElementById('mapping-box'); if(!mapBox)return;
+  const targets=selectedTargets();
+  if(!targets.length||!S.ref.cols.length){mapBox.classList.add('hidden');mapBox.innerHTML='';updateColumnSafety();return}
+  mapBox.classList.remove('hidden');
+  if(!S.mappings)S.mappings={};
+  if(!S.rules)S.rules={};
+  let out='<h3 style="margin-bottom:6px">Column Mapping & Logic Mapping</h3><div class="attention"><b>🔴 Column name must match for Copy Column</b><br>Untuk menghindari salah update, nama kolom target dan source harus sama. Contoh aman: <strong>Talent Class ← Talent Class</strong>, <strong>Name ← Name</strong>, <strong>NIK ← NIK</strong>.<br>Exception khusus PAT: <strong>PAT 2025 ← PAT</strong>, <strong>PAT 2024 ← PAT</strong>, <strong>PAT 2023 ← PAT</strong>.<br><span class="logic-badge">Logic Mapping</span> boleh memakai key/reference column berbeda dan output custom, misalnya <strong>Employee Status = Active Jun26</strong>.</div>';
+  const summary=[];
+  targets.forEach(c=>{
+    const r=getRule(c);
+    if(r.mode==='logic'){
+      out+='<div class="map-row"><div class="map-target">'+esc(c)+'</div><div class="map-arrow">←</div><div class="input" style="background:#f8fbff;font-weight:800">Logic Mapping</div></div>';
+      out+=renderLogicPanel(c);
+      summary.push({ok:isLogicValid(c),label:logicDescription(c)});
+    }else{
+      if(!r.source)r.source=S.mappings[c]||suggestRefCol(c)||S.ref.cols[0]||'';
+      S.mappings[c]=r.source;
+      const mapped=r.source;
+      const allowed=isMappingAllowed(c,mapped);
+      const opts=S.ref.cols.map(x=>'<option value="'+esc(x)+'" '+(x===mapped?'selected':'')+'>'+esc(x)+'</option>').join('');
+      const q=jsEsc(c);
+      out+='<div class="map-row"><div class="map-target">'+esc(c)+'</div><div class="map-arrow">←</div><select class="input" onchange="setMapping(\''+q+'\',this.value)">'+opts+'</select></div>';
+      out+=renderLogicPanel(c);
+      if(allowed)out+='<div class="ok">✅ Valid Mapping<br>'+esc(c)+' ← '+esc(mapped)+'</div>';
+      else out+='<div class="bad">❌ Invalid Mapping<br>'+esc(c)+' ← '+esc(mapped)+'</div><div class="bad"><b>Mapping mismatch</b><br>Target column <b>'+esc(c)+'</b> is mapped to source column <b>'+esc(mapped)+'</b>. Rename/select matching source column or switch to Logic Mapping before Detect Changes.</div>';
+      summary.push({ok:allowed,label:c+' ← '+mapped});
+    }
+  });
+  out+='<div class="info"><b>Mapping Validation</b>'+summary.map(x=>'<div class="info-line">'+(x.ok?'✅':'❌')+' '+esc(x.label)+'</div>').join('')+'</div>';
+  mapBox.innerHTML=out;
+  updateColumnSafety();
+}
+function setMapping(target,source){
+  if(!S.mappings)S.mappings={};
+  S.mappings[target]=source;
+  const r=getRule(target);r.mode='copy';r.source=source;S.rules[target]=r;
+  updateSelectedSummary();renderMappings();updateColumnSafety();autoSave('mapping');
+}
+function selectRecommended(){S.master.cols.forEach(c=>{if(suggestRefCol(c)&&!isProtected(c))S.selected.add(c)});S.steps[S.activeStep].selected=[...S.selected];updateSelectedSummary();refreshColumns();updateColumnSafety();updateHealth();autoSave('selectRecommended');toast('Kolom yang punya mapping dipilih')}
+function clearColumns(){S.selected.clear();S.steps[S.activeStep].selected=[];updateSelectedSummary();refreshColumns();updateColumnSafety();updateHealth();autoSave('clearColumns')}
+
+function emptyExceptionState(){return {errors:[],warnings:[]}}
+function getNameValue(row){return row?.Name||row?.Nama||row?.['Employee Name']||row?.['Nama Karyawan']||''}
+function buildException(kind,severity,title,source,reason,impact,action,rows){return {kind,severity,title,source,reason,impact,action,affectedRows:rows||[]}}
+function exceptionCount(){const e=S.exceptions||emptyExceptionState();return (e.errors||[]).length+(e.warnings||[]).length}
+function setExceptions(errors,warnings){S.exceptions={errors:errors||[],warnings:warnings||[]};renderExceptions();autoSave('exceptions')}
+function renderExceptions(){
+  const box=document.getElementById('exception-box'); if(!box)return;
+  const ex=S.exceptions||emptyExceptionState(); const errors=ex.errors||[], warnings=ex.warnings||[];
+  if(!errors.length&&!warnings.length){box.className='exception-empty';box.innerHTML='Belum ada exception.';return}
+  const render=(x,i,sev)=>{
+    const cls=sev==='error'?'exception-card exception-error':'exception-card exception-warning';
+    const icon=sev==='error'?'🔴 ERROR':'🟠 WARNING';
+    return '<div class="'+cls+'"><b>'+icon+'<br>'+esc(x.title||'-')+'</b>'+ 
+      '<div class="exception-meta">'+
+      '<div><b>Source:</b> '+esc(x.source||'-')+'</div>'+ 
+      '<div><b>Reason:</b> '+esc(x.reason||'-')+'</div>'+ 
+      '<div><b>Impact:</b> '+esc(x.impact||'-')+'</div>'+ 
+      '<div><b>Action:</b> '+esc(x.action||'-')+'</div>'+ 
+      '<div><b>Affected Rows:</b> '+(x.affectedRows?.length||0).toLocaleString()+'</div>'+ 
+      '</div><div class="exception-actions"><button class="btn btn-sm" onclick="downloadExceptionReport(\''+sev+'\','+i+')">Download Report</button></div></div>'
+  };
+  box.className='';
+  box.innerHTML='<div class="exception-empty" style="margin-bottom:8px"><b>Exception Center</b><br>Errors: '+errors.length+' • Warnings: '+warnings.length+'<br><span class="muted">Merah = harus diperbaiki sebelum Detect. Orange = insight, proses bisa lanjut.</span></div>'+errors.map((x,i)=>render(x,i,'error')).join('')+warnings.map((x,i)=>render(x,i,'warning')).join('');
+}
+function downloadExceptionReport(sev,idx){
+  const ex=S.exceptions||emptyExceptionState(); const item=(sev==='error'?ex.errors:ex.warnings)[idx];
+  if(!item)return toast('Exception tidak ditemukan',true);
+  const rows=(item.affectedRows||[]).map(r=>({NIK:r.NIK||r.key||'',Name:r.Name||r.name||'',Issue:item.title||'',Column:r.Column||'',Value:r.Value||''}));
+  if(!rows.length)return toast('Tidak ada row untuk report ini',true);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Report');
+  XLSX.writeFile(wb, safe(item.title||'Exception_Report')+'_'+dateStr()+'.xlsx');
+}
+function validateBeforeDetect(km,kr,selected){
+  const errors=[], warnings=[];
+  const masterName=S.master.name||'Working Master'; const refName=S.ref.name||'Reference';
+  const masterBlank=[], refBlank=[];
+  (S.master.data||[]).forEach((r,i)=>{if(!norm(r[km]))masterBlank.push({NIK:'',Name:getNameValue(r),row:i+2})});
+  (S.ref.data||[]).forEach((r,i)=>{if(!norm(r[kr]))refBlank.push({NIK:'',Name:getNameValue(r),row:i+2})});
+  if(masterBlank.length)errors.push(buildException('blank_master_key','error','Blank Key Detected','Working Master: '+masterName+' | Key Column: '+km,'Selected key column ('+km+') contains blank values in working master.','DeltaHub cannot determine which employee should be matched.','Remove or complete blank key rows in the working master, then upload again.',masterBlank));
+  if(refBlank.length)errors.push(buildException('blank_reference_key','error','Blank Key Detected','Reference File: '+refName+' | Key Column: '+kr,'Selected key column ('+kr+') contains blank values in reference file.','DeltaHub cannot determine which reference records should be matched.','Remove or complete blank key rows in the reference file, then upload again.',refBlank));
+  const mismatch=mappingMismatchRows(km,kr,selected);
+  if(mismatch.length)errors.push(buildException('column_mapping_mismatch','error','Column Mapping Mismatch','Working Master: '+masterName+' | Reference File: '+refName,'Selected key/update column names do not match. Only exact header matches are allowed, except PAT year columns can map to PAT.','DeltaHub blocks Detect Changes to prevent accidental overwrite caused by wrong column mapping.','Rename the source column or select the matching source column. Example: Talent Class ← Talent Class, Name ← Name, NIK ← NIK. PAT exception: PAT 2025 ← PAT.',mismatch));
+  if(errors.length)return {blocked:true,errors,warnings};
+  const groups={};
+  (S.ref.data||[]).forEach((r,i)=>{const k=norm(r[kr]); if(!k)return; (groups[k]=groups[k]||[]).push({row:r,idx:i})});
+  const conflictRows=[];
+  const duplicateSameRows=[];
+  Object.entries(groups).forEach(([k,arr])=>{
+    if(arr.length<2)return;
+    const rowSignatures=arr.map(x=>{
+      const parts=[];
+      selected.forEach(c=>{const refCol=(S.mappings&&S.mappings[c])||suggestRefCol(c); if(refCol)parts.push(refCol+': '+String(x.row[refCol]??'').trim())});
+      return parts.join(' | ');
+    });
+    const unique=[...new Set(rowSignatures.map(v=>normCompare(v)))];
+    if(unique.length>1){
+      arr.forEach((x,idx)=>{
+        selected.forEach(c=>{
+          const refCol=(S.mappings&&S.mappings[c])||suggestRefCol(c); if(!refCol)return;
+          const vals=[...new Set(arr.map(y=>normCompare(y.row[refCol])))];
+          if(vals.length>1)conflictRows.push({NIK:k,Name:getNameValue(x.row),Column:refCol,Value:String(x.row[refCol]??''),row:x.idx+2});
+        })
+      })
+    }else{
+      duplicateSameRows.push({NIK:k,Name:getNameValue(arr[0].row),Column:selected.join(', '),Value:'Duplicate rows: '+arr.length+' | Same selected values',row:arr[0].idx+2});
+    }
+  });
+  if(conflictRows.length)errors.push(buildException('duplicate_reference_conflict','error','Conflicting Duplicate Key','Reference File: '+refName+' | Key Column: '+kr,'Same key appears multiple times with different values in the selected update columns.','DeltaHub cannot determine which record is correct.','Review duplicate records in the reference file and keep only the correct row, then upload again.',conflictRows));
+  if(duplicateSameRows.length)warnings.push(buildException('duplicate_reference_same_value','warning','Duplicate Key Detected (Same Value)','Reference File: '+refName+' | Key Column: '+kr,'Same key appears multiple times, but all selected update values are identical.','Update result will be identical. Safe to continue.','Optional review only. No correction is required unless the duplicate rows should be cleaned from the source file.',duplicateSameRows));
+  return {blocked:errors.length>0,errors,warnings};
+}
+
+function detectDelta(){
+  if(!S.master.data.length)return toast('Upload Working Master dulu',true);
+  if(!S.ref.data.length)return toast('Upload Reference dulu',true);
+  if(!S.selected.size){updateColumnSafety();return toast('Pilih kolom yang mau diupdate dulu',true);}
+  const km=document.getElementById('key-master').value, kr=document.getElementById('key-ref').value;
+  if(!km||!kr)return toast('Key column belum terdeteksi',true);
+  const selected=selectedTargets();
+  const validation=validateBeforeDetect(km,kr,selected);
+  if(validation.blocked){setExceptions(validation.errors,validation.warnings);S.changes=[];S.lastDetected=0;S.lastDetectAt=null;renderDelta(0);updateHealth();toast('Detect diblokir. Periksa Exception Center.',true);return}
+  const ridx={};
+  S.ref.data.forEach(r=>{const k=norm(r[kr]);if(k&&!ridx[k])ridx[k]=r});
+  const leftKeys=new Set();const changes=[];let same=0;
+  S.master.data.forEach((m,idx)=>{
+    const k=norm(m[km]);
+    if(k)leftKeys.add(k);
+    const r=ridx[k];
+    const name=getNameValue(m);
+    if(!r){changes.push({row:idx,key:k,name,col:'Employee Status',before:m['Employee Status']||'',after:'Not Found in Reference',status:'not_in_reference',confidence:90});return}
+    let changed=false;
+    selected.forEach(c=>{
+      const rule=getRule(c);
+      if(c===km||isProtected(c))return;
+      let newv='', label='', sourceCol='';
+      if(rule.mode==='logic'){
+        if(!isLogicValid(c))return;
+        if(rule.logicType==='IF_KEY_NOT_FOUND')return;
+        newv=logicOutputValue(rule);
+        label=logicDescription(c);
+        sourceCol='Logic Mapping';
+      }else{
+        const refCol=rule.source||S.mappings?.[c]||suggestRefCol(c);
+        if(!refCol)return;
+        newv=String(r[refCol]??'').trim();
+        label=c+' ← '+refCol;
+        sourceCol=refCol;
+      }
+      const oldv=String(m[c]??'').trim();
+      if(newv!==''&&normCompare(oldv)!==normCompare(newv)){
+        changes.push({row:idx,key:k,name,col:label,targetCol:c,sourceCol:sourceCol,before:oldv,after:newv,status:'modified',confidence:rule.mode==='logic'?97:95,mode:rule.mode||'copy',logicType:rule.logicType||''});
+        changed=true;
+      }
+    });
+    if(!changed)same++;
+  });
+  const refNotFound=[];
+  Object.keys(ridx).forEach(k=>{if(!leftKeys.has(k)){const r=ridx[k];const nm=getNameValue(r);refNotFound.push({NIK:k,Name:nm});changes.push({row:null,key:k,name:nm,col:'ALL',before:'Not in Working Master',after:'Pending New Employee',status:'new',confidence:95})}});
+  const masterNotFound=[];
+  S.master.data.forEach((m,idx)=>{const k=norm(m[km]);if(k&&!ridx[k])masterNotFound.push({NIK:k,Name:getNameValue(m),row:idx+2})});
+  const warnings=[...(validation.warnings||[])];
+  if(refNotFound.length)warnings.push(buildException('reference_not_found','warning','Reference Not Found in Master','Reference File: '+(S.ref.name||'-')+' | Working Master: '+(S.master.name||'-'),'Records exist in reference but cannot be found in working master.','These records will not be updated.','Review these records and validate key consistency.',refNotFound.length,refNotFound));
+  if(masterNotFound.length)warnings.push(buildException('master_not_found','warning','Master Not Found in Reference','Working Master: '+(S.master.name||'-')+' | Reference File: '+(S.ref.name||'-'),'Records exist in working master but cannot be found in reference.','No update will be applied to these records.','Review whether the employee is expected in the source file.',masterNotFound.length,masterNotFound));
+  setExceptions([],warnings);
+  S.changes=changes;S.lastDetected=changes.filter(x=>x.status==='modified').length;S.lastDetectAt=new Date().toISOString();S.steps[S.activeStep].changes=changes.length;renderDelta(same);updateHealth();autoSave('detect');const mod=changes.filter(x=>x.status==='modified').length;const nw=changes.filter(x=>x.status==='new').length;const off=changes.filter(x=>x.status==='not_in_reference').length;toast('Detect complete: '+mod.toLocaleString()+' updates, '+nw.toLocaleString()+' new NIK, '+off.toLocaleString()+' not in reference')
+}
+function renderDelta(sameOverride){const ch=S.changes||[];document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';document.getElementById('apply-btn').disabled=true;updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');ap.disabled=false;ap.textContent='✓ Apply to Working Master';updateColumnSafety()}
+function esc(v){return String(v).replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
+
+function normalizeEmail(e){return String(e||'').trim().toLowerCase()}
+function roleRank(role){return {Viewer:1,Editor:2,Admin:3}[role]||0}
+function currentAccess(){
+  const email=normalizeEmail(S.currentUser||document.getElementById('current-email')?.value||'');
+  if(!S.accessUsers)S.accessUsers=[];
+  if(S.accessUsers.length===0)return {email:email||'setup-admin',role:'Admin',setup:true};
+  const found=S.accessUsers.find(u=>normalizeEmail(u.email)===email && u.status!=='Inactive');
+  return found?{email:found.email,role:found.role,setup:false}:{email,role:'Blocked',setup:false};
+}
+function requireRole(minRole){
+  const a=currentAccess();
+  if(a.role==='Blocked'){toast('Access denied. Email belum masuk whitelist.',true);return false}
+  if(roleRank(a.role)<roleRank(minRole)){toast('Role '+a.role+' tidak punya akses untuk aksi ini.',true);return false}
+  return true
+}
+function setCurrentUser(){S.currentUser=normalizeEmail(document.getElementById('current-email').value);renderAccess();toast('Current user set: '+(S.currentUser||'blank'))}
+function addAccessUser(){
+  if(!requireRole('Admin'))return;
+  const email=normalizeEmail(document.getElementById('new-user-email').value);
+  const role=document.getElementById('new-user-role').value;
+  if(!email||!email.includes('@'))return toast('Isi email yang valid',true);
+  if(!S.accessUsers)S.accessUsers=[];
+  const existing=S.accessUsers.find(u=>normalizeEmail(u.email)===email);
+  if(existing){existing.role=role;existing.status='Active'} else {S.accessUsers.push({email,role,status:'Active'})}
+  document.getElementById('new-user-email').value='';renderAccess();toast('User ditambahkan: '+email+' ('+role+')')
+}
+function removeAccessUser(email){
+  if(!requireRole('Admin'))return;
+  S.accessUsers=(S.accessUsers||[]).filter(u=>normalizeEmail(u.email)!==normalizeEmail(email));renderAccess();toast('User dihapus')
+}
+function renderAccess(){
+  if(!S.accessUsers)S.accessUsers=[]; if(!S.currentUser)S.currentUser='';
+  const inp=document.getElementById('current-email'); if(inp && !inp.value) inp.value=S.currentUser||'';
+  const a=currentAccess(); const st=document.getElementById('access-status'); const tb=document.getElementById('access-body');
+  if(st){st.innerHTML=(a.setup?'Setup mode: whitelist kosong, akses sementara = ':'Current access: ')+'<b>'+esc(a.role)+'</b>'+(a.email?' • '+esc(a.email):'')}
+  if(tb){tb.innerHTML=''; if(!S.accessUsers.length){tb.innerHTML='<tr><td colspan="3" class="muted">Belum ada whitelist. Tambahkan sampai ±50 user.</td></tr>'} else {S.accessUsers.forEach(u=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(u.email)+'</td><td><span class="role-badge">'+esc(u.role)+'</span></td><td><button class="btn btn-sm" onclick="removeAccessUser(\''+esc(u.email)+'\')">x</button></td>';tb.appendChild(tr)})}}
+  const sub=document.getElementById('app-sub'); if(sub) sub.textContent='Working Master flow • '+S.applied+' applied batch(es) • '+a.role;
+}
+function downloadAccessList(){
+  if(!requireRole('Admin'))return;
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.accessUsers||[]),'Access_Control');XLSX.writeFile(wb,'DeltaHub_Access_Control_'+dateStr()+'.xlsx')
+}
+
+function applyDelta(){if(!requireRole('Editor'))return;const mods=S.changes.filter(x=>x.status==='modified');if(!mods.length)return toast('Tidak ada modified field untuk di-apply',true);if(!confirm('Apply '+mods.length.toLocaleString()+' perubahan ke Working Master?'))return;const ts=new Date().toISOString();const btn=document.getElementById('apply-btn');if(btn){btn.disabled=true;btn.textContent='Applying... 0%'}mods.forEach((x,i)=>{const target=x.targetCol||String(x.col).split(' ← ')[0];S.master.data[x.row][target]=x.after;S.changelog.push({Timestamp:ts,Step:S.steps[S.activeStep].name,NIK:x.key,Name:x.name,Column:x.col,Before:x.before,After:x.after,Status:x.status,Confidence:x.confidence});if(btn){const pct=Math.round(((i+1)/mods.length)*100);btn.textContent='Applying... '+pct+'%'}});S.steps[S.activeStep].applied=true;S.applied=(S.applyHistory||[]).length+1;S.lastApply=ts;S.lastApplied=mods.length;S.lastDetected=mods.length;const first=mods[0]||{};const mapLabel=first.col||([...S.selected][0]||'Column')+' ← '+((S.mappings&&S.mappings[[...S.selected][0]])||'Reference');S.applyHistory=S.applyHistory||[];S.applyHistory.unshift({timestamp:ts,step:S.steps[S.activeStep].name||'Data Update',reference:S.ref.name||'-',mapping:mapLabel,changes:mods.length});if(btn){btn.textContent='✓ Applied Successfully';btn.classList.add('btn-primary')}toast('Applied to Working Master: '+mods.length.toLocaleString()+' fields. Final Excel ready.');refreshUI();autoSave('apply');}
+function downloadFinal(){if(!requireRole('Viewer'))return;if(!S.master.data.length)return toast('Belum ada Working Master',true);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.master.data),'Working_Master_Final');if(S.changelog.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.changelog),'Changelog_Auto');XLSX.writeFile(wb,safe(S.projectName)+'_Final_'+dateStr()+'.xlsx')}
+function downloadChangelog(){if(!requireRole('Viewer'))return;if(!S.changelog.length)return toast('Belum ada changelog applied',true);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.changelog),'Changelog_Auto');XLSX.writeFile(wb,'Changelog_'+safe(S.projectName)+'_'+dateStr()+'.xlsx')}
+function safe(s){return String(s||'DeltaHub').replace(/[^a-z0-9_-]+/gi,'_').slice(0,80)}function dateStr(){return new Date().toISOString().slice(0,10)}
+function saveProjectJson(){if(!requireRole('Editor'))return;const clone={...S,selected:[...S.selected]};const blob=new Blob([JSON.stringify(clone,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=safe(S.projectName||'DeltaHub_Project')+'.json';a.click()}
+function openProjectFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const obj=JSON.parse(ev.target.result);hydrateState(obj);showApp();autoSave('openJson');toast('Project loaded: '+S.projectName)}catch(err){toast('Gagal buka JSON: '+err.message,true)}};r.readAsText(f)}
+function checkApi(){const ok=document.getElementById('api-key').value.trim().startsWith('sk-');['ai-map','ai-rec','ai-sum'].forEach(id=>document.getElementById(id).disabled=!ok)}
+async function runAI(mode){if(!requireRole('Editor'))return;const key=document.getElementById('api-key').value.trim();if(!key)return toast('Isi API key dulu',true);const prompt=document.getElementById('ai-prompt').value.trim();const payload={mode,projectType:S.projectType,step:S.steps[S.activeStep]?.name,master_columns:S.master.cols,reference_columns:S.ref.cols,selected_columns:[...S.selected],delta_stats:{modified:S.changes.filter(x=>x.status==='modified').length,new_nik:S.changes.filter(x=>x.status==='new').length,not_in_reference:S.changes.filter(x=>x.status==='not_in_reference').length},user_note:prompt};const sys='Kamu adalah AI assistant untuk DeltaHub. Jawab Bahasa Indonesia, ringkas, audit-ready. Jangan minta data personal. Beri output praktis untuk data reconciliation.';let task='';if(mode==='mapping')task='Sarankan mapping kolom antara master dan reference. Beri confidence dan kolom yang tidak cocok.';if(mode==='recommend')task='Rekomendasikan kolom yang aman diupdate dan kolom yang harus dihindari. Jelaskan risiko.';if(mode==='summary')task='Buat executive summary dari statistik delta dan update step.';document.getElementById('ai-result').classList.remove('hidden');document.getElementById('ai-result').innerHTML='DeepSeek sedang menganalisis...';try{const res=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'deepseek-chat',messages:[{role:'system',content:sys},{role:'user',content:task+'\n\nData ringkas token-safe:\n'+JSON.stringify(payload)}],temperature:.2,max_tokens:700})});if(!res.ok){let er=await res.text();throw new Error(er.slice(0,160))}const d=await res.json();const reply=d.choices?.[0]?.message?.content||'No response';document.getElementById('ai-result').innerHTML='<b>AI Result:</b><br><br>'+esc(reply).replace(/\n/g,'<br>')}catch(err){document.getElementById('ai-result').innerHTML='<b>DeepSeek error:</b> '+esc(err.message);toast('DeepSeek error',true)}}
+
+function renderHistory(){
+  const box=document.getElementById('history-box');
+  if(!box)return;
+  const h=S.applyHistory||[];
+  if(!h.length){box.className='ok';box.innerHTML='Belum ada perubahan yang di-apply.';return}
+  const total=h.reduce((a,x)=>a+(Number(x.changes)||0),0);
+  const rows=h.slice(0,8).map(x=>'<div style="border-bottom:1px solid #cfe3ff;padding:8px 0"><div class="muted">'+formatTime(x.timestamp)+'</div><b style="color:#0f4ea8">✓ '+esc(x.step||'Data Update')+'</b><br><span>Reference: '+esc(x.reference||'-')+'</span><br><span>Mapping: '+esc(x.mapping||'-')+'</span><br><span class="badge" style="display:inline-block;margin-top:5px">'+Number(x.changes||0).toLocaleString()+' changes applied</span></div>').join('');
+  box.className='ok';
+  box.innerHTML=rows+'<div style="margin-top:8px;font-weight:800;color:#166534">Total applied changes: '+total.toLocaleString()+'</div>';
+}
+
+function formatTime(ts){if(!ts)return '—';try{return new Date(ts).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch(e){return ts}}
+function updateHealth(){
+  const box=document.getElementById('health-box');
+  if(!box)return;
+  const detected=S.lastDetected||0;
+  const applied=S.lastApplied||0;
+  const hasMaster=!!(S.master&&S.master.data&&S.master.data.length);
+  const hasRef=!!(S.ref&&S.ref.data&&S.ref.data.length);
+  const hasCols=!!(S.selected&&S.selected.size);
+  const hasDetect=!!S.lastDetectAt;
+  const activeStep=S.steps?.[S.activeStep]||{};
+  const hasApply=!!(activeStep.applied&&S.lastApply);
+  const ready=hasApply || (hasDetect && detected===0);
+  const checks=[
+    ['Working Master uploaded',hasMaster],
+    ['Reference uploaded',hasRef],
+    ['Column selected',hasCols],
+    ['Delta detected',hasDetect],
+    ['Applied to Working Master',hasApply],
+    ['Ready for Download',ready]
+  ];
+  const completed=checks.filter(x=>x[1]).length;
+  const pct=Math.round((completed/checks.length)*100);
+  let status='Upload Working Master dulu.';
+  let cls='health-wait';
+  if(!hasMaster) status='Upload Working Master dulu.';
+  else if(!hasRef) status='Upload Reference untuk step aktif.';
+  else if(!hasCols) status='Pilih kolom yang mau diupdate.';
+  else if(!hasDetect) status='Siap detect changes. Default proses 0 token.';
+  else if(!hasApply && detected>0) status='Preview ready. Belum apply.';
+  else if(ready){status='✓ Ready for Download';cls='health-ready'}
+  box.className='ok '+cls;
+  const checklist=checks.map(([label,ok])=>'<div><span class="'+(ok?'yes':'no')+'">'+(ok?'✓':'○')+'</span><span>'+label+'</span></div>').join('');
+  box.innerHTML='<div class="health-title">Working Master '+(hasApply?'Updated':'Status')+'</div>'+ 
+    '<div class="health-progress"><span style="width:'+pct+'%"></span></div>'+ 
+    '<div><b>'+pct+'%</b> — '+status+'</div>'+ 
+    '<div class="health-check">'+checklist+'</div>'+ 
+    '<div class="health-kv" style="margin-top:8px">'+
+    '<div><b>Applied:</b> '+applied.toLocaleString()+' / '+detected.toLocaleString()+' changes</div>'+ 
+    '<div><b>Last Apply:</b> '+formatTime(S.lastApply)+'</div>'+ 
+    '<div><b>Autosaved:</b> '+formatTime(S.lastSaveAt)+'</div>'+ 
+    '</div>'+ 
+    '<div class="health-note">Progress dihitung dari checklist di atas, bukan estimasi waktu proses.</div>';
+  const lp=document.getElementById('landing-progress'); if(lp) lp.style.width=pct+'%';
+}
+
+renderTypes();
+updateLandingRestore();
+</script>
+</body>
+</html>
