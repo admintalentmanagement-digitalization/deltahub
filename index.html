@@ -347,12 +347,19 @@ function setRuleMode(target,mode){
   S.rules[target]=r;
   renderMappings();updateColumnSafety();autoSave('logicMode');
 }
-function updateRule(target,patch){
+function updateRule(target,patch,opts){
   const r=getRule(target);
   Object.assign(r,patch);
   S.rules[target]=r;
   if(r.mode==='copy'&&r.source)S.mappings[target]=r.source;
+  if(opts&&opts.silent){autoSave('logicRuleTyping');return}
   renderMappings();updateColumnSafety();autoSave('logicRule');
+}
+function updateRuleTyping(target,patch){
+  updateRule(target,patch,{silent:true});
+}
+function commitRuleTyping(){
+  renderMappings();updateColumnSafety();autoSave('logicRuleCommit');
 }
 function logicOutputValue(rule){
   if(rule.logicType==='TODAY')return new Date().toISOString().slice(0,10);
@@ -399,7 +406,7 @@ function renderLogicPanel(target){
     html+='<option value="TIMESTAMP" '+(logicType==='TIMESTAMP'?'selected':'')+'>Timestamp()</option>';
     html+='</select></div>';
     html+='<div class="logic-field"><label>Reference Key / Condition Column</label><select class="input" onchange="updateRule(\''+q+'\',{referenceKey:this.value})">'+refOptions+'</select></div>';
-    html+='<div class="logic-field"><label>Output Value</label><input class="input" '+outputDisabled+' value="'+esc(outputValue)+'" placeholder="Contoh: Active Jun26" oninput="updateRule(\''+q+'\',{outputValue:this.value})" /></div>';
+    html+='<div class="logic-field"><label>Output Value</label><input class="input" '+outputDisabled+' value="'+esc(outputValue)+'" placeholder="Contoh: Active Jun26" oninput="updateRuleTyping(\''+q+'\',{outputValue:this.value})" onblur="commitRuleTyping()" /></div>';
     html+='</div>';
     html+=isLogicValid(target)?'<div class="logic-preview">✅ Valid Logic Mapping<br>'+esc(logicDescription(target))+'</div>':'<div class="logic-warning">⚠️ Lengkapi Logic Mapping sebelum Detect Changes.</div>';
   }
@@ -654,7 +661,7 @@ function detectDelta(){
   setExceptions([],warnings);
   S.changes=changes;S.lastDetected=changes.filter(x=>x.status==='modified').length;S.lastDetectAt=new Date().toISOString();S.steps[S.activeStep].changes=changes;S.steps[S.activeStep].changeCount=changes.length;renderDelta(same);updateHealth();autoSave('detect');const mod=changes.filter(x=>x.status==='modified').length;const nw=changes.filter(x=>x.status==='new').length;const off=changes.filter(x=>x.status==='not_in_reference').length;toast('Detect complete: '+mod.toLocaleString()+' updates, '+nw.toLocaleString()+' new NIK, '+off.toLocaleString()+' not in reference')
 }
-function renderDelta(sameOverride){const ch=getCurrentChanges();document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';document.getElementById('apply-btn').disabled=true;updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');ap.disabled=false;ap.textContent='✓ Apply to Working Master';updateColumnSafety()}
+function renderDelta(sameOverride){const ch=getCurrentChanges();const activeStep=S.steps?.[S.activeStep]||{};const alreadyApplied=!!activeStep.applied;document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';document.getElementById('apply-btn').disabled=true;updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');if(alreadyApplied){ap.disabled=true;ap.textContent='✓ Applied Successfully';ap.classList.add('btn-primary')}else{ap.disabled=false;ap.textContent='✓ Apply to Working Master';ap.classList.remove('btn-primary')}updateColumnSafety()}
 function esc(v){return String(v).replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
 
 function normalizeEmail(e){return String(e||'').trim().toLowerCase()}
@@ -730,7 +737,10 @@ function applyDelta(){
   });
   const step=S.steps[S.activeStep];
   markStepApplied(step,ts,mods.length);
-  S.changes=[];
+  // Keep the applied preview visible after Apply/Download, so users can still review what was written.
+  const appliedPreview=mods.map(x=>({...x,status:'modified'}));
+  S.changes=appliedPreview;
+  step.changes=appliedPreview;
   S.applied=projectAppliedBatches();
   S.lastApply=ts;
   S.lastApplied=mods.length;
