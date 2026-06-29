@@ -223,7 +223,7 @@ async function idbSet(key,value){const db=await openDB();return new Promise((res
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbDel(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).delete(key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 function serializeState(){const clone={...S,selected:[...S.selected]};clone._autosavedAt=new Date().toISOString();return clone}
-function hydrateState(obj){S=obj||S;if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);S.selected=new Set(obj.selected||[]);S.steps=S.steps||[];S.accessUsers=S.accessUsers||[];S.currentUser=S.currentUser||'';S.lastApply=S.lastApply||null;S.lastApplied=S.lastApplied||0;S.lastDetected=S.lastDetected||0;S.lastDetectAt=S.lastDetectAt||null;S.lastSaveAt=S._autosavedAt||S.lastSaveAt||null;S.master=S.master||{name:'',data:[],cols:[]};S.ref=S.ref||{name:'',data:[],cols:[]};S.mappings=S.mappings||{};S.rules=S.rules||{};S.changes=S.changes||[];S.changelog=S.changelog||[];S.applyHistory=S.applyHistory||[];S.exceptions=S.exceptions||{errors:[],warnings:[]};return S}
+function hydrateState(obj){S=obj||S;if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);S.selected=new Set(obj.selected||[]);S.steps=S.steps||[];S.steps.forEach(st=>{if(!Array.isArray(st.changes)){st.changeCount=Number(st.changes)||st.changeCount||0;st.changes=[];} if(st.applied&&!st.appliedCount)st.appliedCount=st.changeCount||0;});S.accessUsers=S.accessUsers||[];S.currentUser=S.currentUser||'';S.lastApply=S.lastApply||null;S.lastApplied=S.lastApplied||0;S.lastDetected=S.lastDetected||0;S.lastDetectAt=S.lastDetectAt||null;S.lastSaveAt=S._autosavedAt||S.lastSaveAt||null;S.master=S.master||{name:'',data:[],cols:[]};S.ref=S.ref||{name:'',data:[],cols:[]};S.mappings=S.mappings||{};S.rules=S.rules||{};S.changes=S.changes||[];S.changelog=S.changelog||[];S.applyHistory=S.applyHistory||[];S.exceptions=S.exceptions||{errors:[],warnings:[]};return S}
 function ensureProjectId(){if(!S.projectId)S.projectId='p_'+Date.now()+'_'+Math.random().toString(16).slice(2);return S.projectId}
 async function saveRecentProject(obj){
   try{
@@ -273,7 +273,7 @@ function showApp(){document.getElementById('landing').classList.add('hidden');do
 function refreshUI(){document.getElementById('app-title').textContent=S.projectName;document.getElementById('app-sub').textContent='Working Master flow • '+S.applied+' applied batch(es)';renderStepNav();renderTabs();renderAccess();setActiveStep(S.activeStep);renderHistory();renderExceptions();updateHealth();updateMasterLock();}
 function renderStepNav(){const list=document.getElementById('step-list');list.innerHTML='';S.steps.forEach((s,i)=>{const d=document.createElement('div');d.className='step '+(i===S.activeStep?'active ':'')+(s.applied?'done':'');d.innerHTML='<span class="dot"></span><div><b>'+s.name+'</b><br><small>'+(s.applied?'Applied':(s.refName||'Waiting reference'))+'</small></div>';d.onclick=()=>setActiveStep(i);list.appendChild(d)});document.getElementById('nav-master').className='step '+(S.master.data.length?'done':'active');document.getElementById('master-small').textContent=S.master.name||'Belum ada file'}
 function renderTabs(){const tabs=document.getElementById('step-tabs');tabs.innerHTML='';S.steps.forEach((s,i)=>{const b=document.createElement('button');b.className='tab '+(i===S.activeStep?'active':'');b.textContent=(s.applied?'✓ ':'')+s.name;b.onclick=()=>setActiveStep(i);tabs.appendChild(b)})}
-function setActiveStep(i){S.activeStep=i;const step=S.steps[i];S.selected=new Set(step.selected||[]);S.changes=step.changes||[];document.getElementById('active-step-name').textContent=step.name;document.getElementById('active-step-desc').textContent='Update step aktif. Upload reference khusus step ini.';renderStepNav();renderTabs();renderPills();fillKeySelects();refreshColumns();renderDelta();autoSave('activeStep');}
+function setActiveStep(i){S.activeStep=i;const step=S.steps[i];S.selected=new Set(step.selected||[]);S.changes=getStepChanges(step);document.getElementById('active-step-name').textContent=step.name;document.getElementById('active-step-desc').textContent='Update step aktif. Upload reference khusus step ini.';renderStepNav();renderTabs();renderPills();fillKeySelects();refreshColumns();renderDelta();autoSave('activeStep');}
 function addCustomStep(){const n=prompt('Nama update step baru:','Custom Update');if(!n)return;S.steps.push({name:n,refName:'',selected:[],changes:[],applied:false});setActiveStep(S.steps.length-1);autoSave('addStep')}
 function resetStep(){if(!confirm('Reset reference, selected column, dan delta untuk step ini?'))return;S.steps[S.activeStep]={name:S.steps[S.activeStep].name,refName:'',selected:[],changes:[],applied:false};S.ref={name:'',data:[],cols:[]};S.selected.clear();S.changes=[];setActiveStep(S.activeStep);autoSave('resetStep')}
 function over(e,el){e.preventDefault();if(el.classList.contains('locked'))return;el.classList.add('over')}function leave(el){el.classList.remove('over')}function dropFile(e,type,el){e.preventDefault();leave(el);if(type==='master'&&S.master&&S.master.data&&S.master.data.length){toast('Working Master sudah terkunci. Buat Project Baru untuk menggunakan master berbeda.',true);updateMasterLock();return}const f=e.dataTransfer.files[0];if(f)readFile(f,type)}function pickFile(e,type){const f=e.target.files[0];if(f)readFile(f,type);e.target.value=''}
@@ -283,7 +283,7 @@ function readFile(file,type){
     updateMasterLock();
     return;
   }
-  const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(ws,{defval:''});const cols=data.length?Object.keys(data[0]):[];if(type==='master'){S.master={name:file.name,data,cols};S.steps.forEach(st=>{st.applied=false;st.changes=[]});S.changes=[];S.lastApply=null;S.lastApplied=0;S.lastDetected=0;S.lastDetectAt=null;S.applyHistory=[];S.applied=0;}else{S.ref={name:file.name,data,cols};const step=S.steps[S.activeStep];step.refName=file.name;step.applied=false;step.changes=[];step.selected=[];S.selected=new Set();S.mappings={};S.changes=[];S.lastApply=null;S.lastApplied=0;S.lastDetected=0;S.lastDetectAt=null;S.applied=S.steps.filter(x=>x.applied).length;}S.exceptions={errors:[],warnings:[]};renderExceptions();toast('Berhasil baca '+file.name+' • '+data.length.toLocaleString()+' rows');fillKeySelects();refreshColumns();renderPills();renderStepNav();renderTabs();renderDelta();updateHealth();autoSave('file')}catch(err){toast('Gagal baca file: '+err.message,true)}};r.readAsBinaryString(file)}
+  const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(ws,{defval:''});const cols=data.length?Object.keys(data[0]):[];if(type==='master'){S.master={name:file.name,data,cols};S.steps.forEach(st=>{st.applied=false;st.appliedAt=null;st.appliedCount=0;st.changeCount=0;st.changes=[]});S.changes=[];S.lastApply=null;S.lastApplied=0;S.lastDetected=0;S.lastDetectAt=null;S.applyHistory=[];S.applied=0;}else{S.ref={name:file.name,data,cols};const step=S.steps[S.activeStep];step.refName=file.name;step.applied=false;step.appliedAt=null;step.appliedCount=0;step.changeCount=0;step.changes=[];step.selected=[];S.selected=new Set();S.mappings={};S.changes=[];S.lastApply=null;S.lastApplied=0;S.lastDetected=0;S.lastDetectAt=null;S.applied=S.steps.filter(x=>x.applied).length;}S.exceptions={errors:[],warnings:[]};renderExceptions();toast('Berhasil baca '+file.name+' • '+data.length.toLocaleString()+' rows');fillKeySelects();refreshColumns();renderPills();renderStepNav();renderTabs();renderDelta();updateHealth();autoSave('file')}catch(err){toast('Gagal baca file: '+err.message,true)}};r.readAsBinaryString(file)}
 
 function updateMasterLock(){
   const drop=document.getElementById('drop-master');
@@ -652,9 +652,9 @@ function detectDelta(){
   if(refNotFound.length)warnings.push(buildException('reference_not_found','warning','Reference Not Found in Master','Reference File: '+(S.ref.name||'-')+' | Working Master: '+(S.master.name||'-'),'Records exist in reference but cannot be found in working master.','These records will not be updated.','Review these records and validate key consistency.',refNotFound.length,refNotFound));
   if(masterNotFound.length)warnings.push(buildException('master_not_found','warning','Master Not Found in Reference','Working Master: '+(S.master.name||'-')+' | Reference File: '+(S.ref.name||'-'),'Records exist in working master but cannot be found in reference.','No update will be applied to these records.','Review whether the employee is expected in the source file.',masterNotFound.length,masterNotFound));
   setExceptions([],warnings);
-  S.changes=changes;S.lastDetected=changes.filter(x=>x.status==='modified').length;S.lastDetectAt=new Date().toISOString();S.steps[S.activeStep].changes=changes.length;renderDelta(same);updateHealth();autoSave('detect');const mod=changes.filter(x=>x.status==='modified').length;const nw=changes.filter(x=>x.status==='new').length;const off=changes.filter(x=>x.status==='not_in_reference').length;toast('Detect complete: '+mod.toLocaleString()+' updates, '+nw.toLocaleString()+' new NIK, '+off.toLocaleString()+' not in reference')
+  S.changes=changes;S.lastDetected=changes.filter(x=>x.status==='modified').length;S.lastDetectAt=new Date().toISOString();S.steps[S.activeStep].changes=changes;S.steps[S.activeStep].changeCount=changes.length;renderDelta(same);updateHealth();autoSave('detect');const mod=changes.filter(x=>x.status==='modified').length;const nw=changes.filter(x=>x.status==='new').length;const off=changes.filter(x=>x.status==='not_in_reference').length;toast('Detect complete: '+mod.toLocaleString()+' updates, '+nw.toLocaleString()+' new NIK, '+off.toLocaleString()+' not in reference')
 }
-function renderDelta(sameOverride){const ch=S.changes||[];document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';document.getElementById('apply-btn').disabled=true;updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');ap.disabled=false;ap.textContent='✓ Apply to Working Master';updateColumnSafety()}
+function renderDelta(sameOverride){const ch=getCurrentChanges();document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';document.getElementById('apply-btn').disabled=true;updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');ap.disabled=false;ap.textContent='✓ Apply to Working Master';updateColumnSafety()}
 function esc(v){return String(v).replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
 
 function normalizeEmail(e){return String(e||'').trim().toLowerCase()}
@@ -700,7 +700,50 @@ function downloadAccessList(){
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.accessUsers||[]),'Access_Control');XLSX.writeFile(wb,'DeltaHub_Access_Control_'+dateStr()+'.xlsx')
 }
 
-function applyDelta(){if(!requireRole('Editor'))return;const mods=S.changes.filter(x=>x.status==='modified');if(!mods.length)return toast('Tidak ada modified field untuk di-apply',true);if(!confirm('Apply '+mods.length.toLocaleString()+' perubahan ke Working Master?'))return;const ts=new Date().toISOString();const btn=document.getElementById('apply-btn');if(btn){btn.disabled=true;btn.textContent='Applying... 0%'}mods.forEach((x,i)=>{const target=x.targetCol||String(x.col).split(' ← ')[0];S.master.data[x.row][target]=x.after;S.changelog.push({Timestamp:ts,Step:S.steps[S.activeStep].name,NIK:x.key,Name:x.name,Column:x.col,Before:x.before,After:x.after,Status:x.status,Confidence:x.confidence});if(btn){const pct=Math.round(((i+1)/mods.length)*100);btn.textContent='Applying... '+pct+'%'}});S.steps[S.activeStep].applied=true;S.applied=(S.applyHistory||[]).length+1;S.lastApply=ts;S.lastApplied=mods.length;S.lastDetected=mods.length;const first=mods[0]||{};const mapLabel=first.col||([...S.selected][0]||'Column')+' ← '+((S.mappings&&S.mappings[[...S.selected][0]])||'Reference');S.applyHistory=S.applyHistory||[];S.applyHistory.unshift({timestamp:ts,step:S.steps[S.activeStep].name||'Data Update',reference:S.ref.name||'-',mapping:mapLabel,changes:mods.length});if(btn){btn.textContent='✓ Applied Successfully';btn.classList.add('btn-primary')}toast('Applied to Working Master: '+mods.length.toLocaleString()+' fields. Final Excel ready.');refreshUI();autoSave('apply');}
+
+function getCurrentStep(){return S.steps?.[S.activeStep]||{};}
+function getStepChanges(step){return Array.isArray(step?.changes)?step.changes:[];}
+function getCurrentChanges(){return Array.isArray(S.changes)?S.changes:[];}
+function markStepApplied(step,ts,count){
+  if(!step)return;
+  step.applied=true;
+  step.appliedAt=ts;
+  step.appliedCount=count||0;
+  step.changes=[];
+  step.changeCount=count||0;
+}
+function projectAppliedBatches(){return (S.steps||[]).filter(x=>x.applied).length;}
+
+function applyDelta(){
+  if(!requireRole('Editor'))return;
+  const mods=getCurrentChanges().filter(x=>x.status==='modified');
+  if(!mods.length)return toast('Tidak ada modified field untuk di-apply',true);
+  if(!confirm('Apply '+mods.length.toLocaleString()+' perubahan ke Working Master?'))return;
+  const ts=new Date().toISOString();
+  const btn=document.getElementById('apply-btn');
+  if(btn){btn.disabled=true;btn.textContent='Applying... 0%'}
+  mods.forEach((x,i)=>{
+    const target=x.targetCol||String(x.col).split(' ← ')[0];
+    S.master.data[x.row][target]=x.after;
+    S.changelog.push({Timestamp:ts,Step:S.steps[S.activeStep].name,NIK:x.key,Name:x.name,Column:x.col,Before:x.before,After:x.after,Status:x.status,Confidence:x.confidence});
+    if(btn){const pct=Math.round(((i+1)/mods.length)*100);btn.textContent='Applying... '+pct+'%'}
+  });
+  const step=S.steps[S.activeStep];
+  markStepApplied(step,ts,mods.length);
+  S.changes=[];
+  S.applied=projectAppliedBatches();
+  S.lastApply=ts;
+  S.lastApplied=mods.length;
+  S.lastDetected=mods.length;
+  const first=mods[0]||{};
+  const mapLabel=first.col||([...S.selected][0]||'Column')+' ← '+((S.mappings&&S.mappings[[...S.selected][0]])||'Reference');
+  S.applyHistory=S.applyHistory||[];
+  S.applyHistory.unshift({timestamp:ts,step:step.name||'Data Update',reference:S.ref.name||'-',mapping:mapLabel,changes:mods.length});
+  toast('Applied to Working Master: '+mods.length.toLocaleString()+' fields. Final Excel ready.');
+  autoSave('apply');
+  renderStepNav();renderTabs();renderHistory();renderExceptions();renderDelta(0);updateHealth();updateMasterLock();
+  if(btn){btn.disabled=true;btn.textContent='✓ Applied Successfully';btn.classList.add('btn-primary')}
+}
 function downloadFinal(){if(!requireRole('Viewer'))return;if(!S.master.data.length)return toast('Belum ada Working Master',true);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.master.data),'Working_Master_Final');if(S.changelog.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.changelog),'Changelog_Auto');XLSX.writeFile(wb,safe(S.projectName)+'_Final_'+dateStr()+'.xlsx')}
 function downloadChangelog(){if(!requireRole('Viewer'))return;if(!S.changelog.length)return toast('Belum ada changelog applied',true);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.changelog),'Changelog_Auto');XLSX.writeFile(wb,'Changelog_'+safe(S.projectName)+'_'+dateStr()+'.xlsx')}
 function safe(s){return String(s||'DeltaHub').replace(/[^a-z0-9_-]+/gi,'_').slice(0,80)}function dateStr(){return new Date().toISOString().slice(0,10)}
@@ -724,15 +767,15 @@ function formatTime(ts){if(!ts)return '—';try{return new Date(ts).toLocaleStri
 function updateHealth(){
   const box=document.getElementById('health-box');
   if(!box)return;
-  const detected=S.lastDetected||0;
-  const applied=S.lastApplied||0;
+  const activeStep=S.steps?.[S.activeStep]||{};
+  const hasApply=!!(activeStep.applied&&(activeStep.appliedAt||S.lastApply));
+  const detected=hasApply?(Number(activeStep.appliedCount)||Number(S.lastApplied)||0):(Number(S.lastDetected)||0);
+  const applied=hasApply?(Number(activeStep.appliedCount)||Number(S.lastApplied)||0):(Number(S.lastApplied)||0);
   const hasMaster=!!(S.master&&S.master.data&&S.master.data.length);
   const hasRef=!!(S.ref&&S.ref.data&&S.ref.data.length);
   const hasCols=!!(S.selected&&S.selected.size);
-  const hasDetect=!!S.lastDetectAt;
-  const activeStep=S.steps?.[S.activeStep]||{};
-  const hasApply=!!(activeStep.applied&&S.lastApply);
-  const ready=hasApply || (hasDetect && detected===0);
+  const hasDetect=!!S.lastDetectAt || hasApply;
+  const ready=hasApply || (hasDetect && detected===0 && hasMaster && hasRef && hasCols);
   const checks=[
     ['Working Master uploaded',hasMaster],
     ['Reference uploaded',hasRef],
@@ -759,12 +802,13 @@ function updateHealth(){
     '<div class="health-check">'+checklist+'</div>'+ 
     '<div class="health-kv" style="margin-top:8px">'+
     '<div><b>Applied:</b> '+applied.toLocaleString()+' / '+detected.toLocaleString()+' changes</div>'+ 
-    '<div><b>Last Apply:</b> '+formatTime(S.lastApply)+'</div>'+ 
+    '<div><b>Last Apply:</b> '+formatTime(activeStep.appliedAt||S.lastApply)+'</div>'+ 
     '<div><b>Autosaved:</b> '+formatTime(S.lastSaveAt)+'</div>'+ 
     '</div>'+ 
     '<div class="health-note">Progress dihitung dari checklist di atas, bukan estimasi waktu proses.</div>';
   const lp=document.getElementById('landing-progress'); if(lp) lp.style.width=pct+'%';
 }
+
 
 renderTypes();
 updateLandingRestore();
