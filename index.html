@@ -119,6 +119,28 @@ nav .badge{display:none!important}
 .section-head{position:static!important}
 .card{overflow:hidden}
 
+
+/* ===== DeltaHub Compact Access & Mapping Row Patch ===== */
+.access-compact{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.access-compact .btn{white-space:nowrap}
+.access-drawer{position:fixed;top:0;right:0;width:min(390px,92vw);height:100vh;background:#fff;border-left:1px solid #d7e8ff;box-shadow:-20px 0 40px rgba(15,23,42,.18);z-index:50;transform:translateX(105%);transition:.22s ease;display:flex;flex-direction:column}
+.access-drawer.open{transform:translateX(0)}
+.access-drawer-head{padding:16px 18px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;background:#f8fbff}
+.access-drawer-body{padding:16px 18px;overflow:auto}
+.access-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.28);z-index:49;display:none}
+.access-backdrop.open{display:block}
+.access-row{grid-template-columns:1fr auto!important}
+.access-row .select{min-width:94px}
+.map-item{border:1px solid #d7e8ff;background:#fff;border-radius:14px;padding:12px;margin-top:10px}
+.map-line{display:grid;grid-template-columns:minmax(160px,220px) 24px minmax(220px,1fr) auto auto;gap:10px;align-items:center}
+.map-line .map-target{border:0;background:transparent;padding:0;font-weight:800;color:#111827}
+.map-line .input{width:100%;min-width:0}
+.map-action-copy.active{background:#1d4ed8!important;border-color:#1d4ed8!important;color:#fff!important}
+.map-action-logic.active{background:#f59e0b!important;border-color:#f59e0b!important;color:#fff!important}
+.logic-panel.compact{margin:10px 0 0 244px}
+.logic-panel.compact .logic-tabs{display:none}
+@media(max-width:900px){.map-line{grid-template-columns:1fr}.map-arrow{text-align:left}.logic-panel.compact{margin-left:0}}
+
 </style>
 </head>
 <body>
@@ -181,11 +203,23 @@ nav .badge{display:none!important}
       <div class="side-title">Exception Center</div>
       <div id="exception-box" class="exception-empty">Belum ada exception.</div>
       <div class="side-title">Access Control</div>
-      <div class="warn" id="access-status">No whitelist yet. Admin mode for setup.</div>
-      <div class="access-row"><input class="input" id="current-email" placeholder="your.email@company.com"><button class="btn btn-sm" onclick="setCurrentUser()">Set</button></div>
-      <div class="access-row"><input class="input" id="new-user-email" placeholder="add user email"><select class="select" id="new-user-role"><option>Admin</option><option>Editor</option><option>Viewer</option></select></div>
-      <div class="row" style="margin-top:6px"><button class="btn btn-sm" onclick="addAccessUser()">+ Add User</button><button class="btn btn-sm" onclick="downloadAccessList()">Export</button></div>
-      <table class="mini-table"><thead><tr><th>Email</th><th>Role</th><th></th></tr></thead><tbody id="access-body"><tr><td colspan="3" class="muted">Belum ada whitelist.</td></tr></tbody></table>
+      <div class="access-compact">
+        <div class="warn" id="access-status">No whitelist yet. Admin mode for setup.</div>
+        <button class="btn btn-sm" onclick="openAccessDrawer()">Manage</button>
+      </div>
+      <div class="access-backdrop" id="access-backdrop" onclick="closeAccessDrawer()"></div>
+      <div class="access-drawer" id="access-drawer">
+        <div class="access-drawer-head">
+          <div><b>Access Control</b><div class="muted">Atur admin, editor, dan viewer project.</div></div>
+          <button class="btn btn-sm" onclick="closeAccessDrawer()">Close</button>
+        </div>
+        <div class="access-drawer-body">
+          <div class="field"><label>Current User</label><div class="access-row"><input class="input" id="current-email" placeholder="your.email@company.com"><button class="btn btn-sm" onclick="setCurrentUser()">Set</button></div></div>
+          <div class="field"><label>Add User</label><div class="access-row"><input class="input" id="new-user-email" placeholder="add user email"><select class="select" id="new-user-role"><option>Admin</option><option>Editor</option><option>Viewer</option></select></div></div>
+          <div class="row" style="margin-top:6px"><button class="btn btn-sm" onclick="addAccessUser()">+ Add User</button><button class="btn btn-sm" onclick="downloadAccessList()">Export</button></div>
+          <table class="mini-table"><thead><tr><th>Email</th><th>Role</th><th></th></tr></thead><tbody id="access-body"><tr><td colspan="3" class="muted">Belum ada whitelist.</td></tr></tbody></table>
+        </div>
+      </div>
     </aside>
     <main>
       <section class="card" style="margin-bottom:14px">
@@ -448,11 +482,7 @@ function renderLogicPanel(target){
   const refOptions=S.ref.cols.map(c=>'<option value="'+esc(c)+'" '+(r.referenceKey===c?'selected':'')+'>'+esc(c)+'</option>').join('');
   const outputDisabled=(logicType==='TODAY'||logicType==='TIMESTAMP')?'disabled':'';
   const outputValue=(logicType==='TODAY'||logicType==='TIMESTAMP')?logicOutputValue(r):(r.outputValue??'');
-  let html='<div class="logic-panel">';
-  html+='<div class="logic-tabs">';
-  html+='<button type="button" class="logic-tab '+(r.mode!=='logic'?'active':'')+'" onclick="setRuleMode(\''+q+'\',\'copy\')">Copy Column</button>';
-  html+='<button type="button" class="logic-tab '+(r.mode==='logic'?'active':'')+'" onclick="setRuleMode(\''+q+'\',\'logic\')">Logic Mapping</button>';
-  html+='</div>';
+  let html='<div class="logic-panel compact">';
   if(r.mode==='logic'){
     html+='<div class="logic-grid-3">';
     html+='<div class="logic-field"><label>Logic Type</label><select class="input" onchange="updateRule(\''+q+'\',{logicType:this.value})">';
@@ -561,9 +591,11 @@ function renderMappings(){
   const summary=[];
   targets.forEach(c=>{
     const r=getRule(c);
+    const q=jsEsc(c);
     if(r.mode==='logic'){
-      out+='<div class="map-row"><div class="map-target">'+esc(c)+'</div><div class="map-arrow">←</div><div class="input" style="background:#f8fbff;font-weight:800">Logic Mapping</div></div>';
+      out+='<div class="map-item"><div class="map-line"><div class="map-target">'+esc(c)+'</div><div class="map-arrow">←</div><div class="input" style="background:#fff7ed;font-weight:800;color:#92400e;border-color:#fcd34d">Logic Mapping</div><button type="button" class="btn btn-sm map-action-copy" onclick="setRuleMode(\''+q+'\',\'copy\')">Copy Column</button><button type="button" class="btn btn-sm map-action-logic active" onclick="setRuleMode(\''+q+'\',\'logic\')">Logic Mapping</button></div>';
       out+=renderLogicPanel(c);
+      out+='</div>';
       summary.push({ok:isLogicValid(c),label:logicDescription(c)});
     }else{
       if(!r.source)r.source=S.mappings[c]||suggestRefCol(c)||S.ref.cols[0]||'';
@@ -571,11 +603,10 @@ function renderMappings(){
       const mapped=r.source;
       const allowed=isMappingAllowed(c,mapped);
       const opts=S.ref.cols.map(x=>'<option value="'+esc(x)+'" '+(x===mapped?'selected':'')+'>'+esc(x)+'</option>').join('');
-      const q=jsEsc(c);
-      out+='<div class="map-row"><div class="map-target">'+esc(c)+'</div><div class="map-arrow">←</div><select class="input" onchange="setMapping(\''+q+'\',this.value)">'+opts+'</select></div>';
-      out+=renderLogicPanel(c);
-      if(allowed)out+='<div class="ok">✅ Valid Mapping<br>'+esc(c)+' ← '+esc(mapped)+'</div>';
+      out+='<div class="map-item"><div class="map-line"><div class="map-target">'+esc(c)+'</div><div class="map-arrow">←</div><select class="input" onchange="setMapping(\''+q+'\',this.value)">'+opts+'</select><button type="button" class="btn btn-sm map-action-copy active" onclick="setRuleMode(\''+q+'\',\'copy\')">Copy Column</button><button type="button" class="btn btn-sm map-action-logic" onclick="setRuleMode(\''+q+'\',\'logic\')">Logic Mapping</button></div>';
+      if(allowed)out+='<div class="ok" style="margin-top:10px">✅ Valid Mapping<br>'+esc(c)+' ← '+esc(mapped)+'</div>';
       else out+='<div class="bad">❌ Invalid Mapping<br>'+esc(c)+' ← '+esc(mapped)+'</div><div class="bad"><b>Mapping mismatch</b><br>Target column <b>'+esc(c)+'</b> is mapped to source column <b>'+esc(mapped)+'</b>. Rename/select matching source column or switch to Logic Mapping before Detect Changes.</div>';
+      out+='</div>';
       summary.push({ok:allowed,label:c+' ← '+mapped});
     }
   });
