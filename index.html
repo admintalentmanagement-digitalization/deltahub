@@ -175,6 +175,72 @@ nav .badge{display:none!important}
   #mapping-box .map-arrow{text-align:left}
 }
 
+
+/* ===== DeltaHub Stable Upload Layout Fix v28 ===== */
+#app main > section:first-child .section-body,
+#app main > section:nth-of-type(3) .section-body{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(360px,1fr)!important;
+  gap:16px!important;
+  align-items:stretch!important;
+}
+#drop-master,
+#drop-master.locked,
+#drop-ref{
+  height:172px!important;
+  min-height:172px!important;
+  max-height:172px!important;
+  padding:18px!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+}
+#drop-master.locked{
+  border:1.5px solid #bfdbfe!important;
+  background:#f8fbff!important;
+}
+#drop-master .lock-note{
+  width:min(320px,100%)!important;
+  max-width:320px!important;
+  padding:8px 10px!important;
+  margin-top:8px!important;
+  line-height:1.35!important;
+  font-size:12px!important;
+}
+#pill-master,
+#pill-ref{
+  min-height:34px!important;
+  display:flex!important;
+  align-items:center!important;
+  margin-top:8px!important;
+}
+#app main > section:first-child .warn{
+  min-height:172px!important;
+  height:172px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+}
+#app main > section:nth-of-type(3) .field{
+  margin-bottom:10px!important;
+}
+#app main > section:nth-of-type(3) .select{
+  width:100%!important;
+}
+#app main > section:nth-of-type(3) .muted{
+  line-height:1.35!important;
+}
+@media(max-width:900px){
+  #app main > section:first-child .section-body,
+  #app main > section:nth-of-type(3) .section-body{
+    grid-template-columns:1fr!important;
+  }
+  #app main > section:first-child .warn{
+    height:auto!important;
+    min-height:auto!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -416,9 +482,18 @@ function updateMasterLock(){
   const locked=!!(S.master&&S.master.data&&S.master.data.length);
   drop.classList.toggle('locked',locked);
   if(locked){
-    drop.innerHTML='<div style="font-size:30px">🔒</div><b>Working Master Locked</b><span class="muted">'+esc(S.master.name||'Master loaded')+' • '+(S.master.data?.length||0).toLocaleString()+' rows</span><div class="lock-note"><b>Locked.</b><br>Master terkunci selama project berjalan.<br>1 project = 1 master data.</div>';
-  }else if(!drop.querySelector('input')){
-    drop.innerHTML='<input type="file" accept=".xlsx,.xls,.csv" onchange="pickFile(event,\'master\')"><div style="font-size:30px">📘</div><b>Upload Working Master</b><span class="muted">Excel / CSV</span>';
+    drop.innerHTML=
+      '<div style="font-size:26px;line-height:1">🔒</div>'+
+      '<b>Working Master Locked</b>'+
+      '<span class="muted">'+esc(S.master.name||'Master loaded')+' • '+(S.master.data?.length||0).toLocaleString()+' rows</span>'+
+      '<div class="lock-note"><b>Locked.</b><br>Master terkunci selama project berjalan.<br>1 project = 1 master data.</div>';
+  }else{
+    drop.classList.remove('locked');
+    drop.innerHTML=
+      '<input type="file" accept=".xlsx,.xls,.csv" onchange="pickFile(event,\'master\')">'+
+      '<div style="font-size:30px">📘</div>'+
+      '<b>Upload Working Master</b>'+
+      '<span class="muted">Excel / CSV</span>';
   }
 }
 
