@@ -106,81 +106,18 @@ nav .badge{display:none!important}
 
 
 
-/* ===== DeltaHub Final UI/Preview Fix - 2026-06-30 ===== */
-/* Keep header clean: only one Save Project JSON in nav, keep Download Changelog + Final Excel in workspace */
-nav .row .btn[onclick="saveProjectJson()"]{display:inline-flex!important}
-.main-head .row .btn{display:inline-flex!important}
-.main-head .row .btn[onclick="saveProjectJson()"]{display:none!important}
-.main-head{position:static!important;top:auto!important;padding:0!important;background:transparent!important;z-index:auto!important}
-
-/* Make workspace less tall and easier to scan */
-.wrap{max-width:1180px!important;padding:20px 24px!important}
-.layout{grid-template-columns:250px minmax(0,1fr)!important;gap:16px!important}
-.side{top:74px!important}
-.section-head{position:static!important;top:auto!important;z-index:auto!important;padding:12px 18px!important;background:#f5faff!important}
-.section-body{padding:16px 18px!important}
-.card{border-radius:14px!important;overflow:visible!important}
-
-/* Clear old sticky rule that caused Preview Delta to collide with metric cards */
+/* ===== DeltaHub Final Visual Hotfix ===== */
 #app section:last-child .section-head{position:static!important;top:auto!important;z-index:auto!important}
-#app section:last-child{margin-bottom:36px!important;overflow:hidden!important}
-#app section:last-child .section-body{padding-top:16px!important}
-
-/* Compact Upload Reference layout */
-#app main section:nth-of-type(2) .section-body.grid2,
-#app main section:nth-of-type(3) .section-body.grid2{grid-template-columns:170px minmax(0,1fr)!important;gap:16px!important;align-items:start!important}
-#drop-ref{min-height:132px!important;padding:16px!important}
-#drop-ref + .pill{width:170px!important;max-width:170px!important;overflow-wrap:anywhere!important;line-height:1.35!important}
-#key-master,#key-ref{height:40px!important;max-width:100%!important}
-
-/* Working Master note: concise and not bulky */
-#drop-master.locked{min-height:132px!important;padding:16px!important}
-.lock-note{margin-top:8px!important;padding:9px 10px!important;font-size:12px!important}
-
-/* Column chips: only white or selected blue; disabled hidden */
-.chip{background:#fff!important;color:#334155!important;border:1px solid #cbd5e1!important;box-shadow:none!important}
-.chip.recommended:not(.selected){background:#fff!important;color:#334155!important;border-color:#cbd5e1!important}
-.chip.selected{background:#1d4ed8!important;color:#fff!important;border-color:#1d4ed8!important}
-.chip.disabled,.chip.protected{display:none!important}
-.selected-summary{background:#f8fbff!important;border-color:#bfdbfe!important}
-.selected-mini-chip{background:#1d4ed8!important;color:#fff!important}
-.selected-counter{background:#eef2ff!important;color:#1d4ed8!important;border-color:#c7d2fe!important}
-
-/* Mapping rows: target | arrow | source/logic | buttons in one compact block */
-#mapping-box{background:#fff!important;border-top:1px solid #e2e8f0!important;padding-top:14px!important}
-.map-row{display:grid!important;grid-template-columns:190px 24px minmax(180px,1fr)!important;gap:10px!important;align-items:center!important;margin-top:12px!important}
-.logic-panel{margin:6px 0 10px 224px!important;padding:10px!important;background:#f8fbff!important;border:1px solid #bfdbfe!important;border-radius:12px!important}
-.logic-tabs{margin-bottom:0!important}
-.logic-grid-3{grid-template-columns:170px minmax(180px,1fr) 210px!important;gap:10px!important}
-.logic-tab.active{background:#f59e0b!important;border-color:#f59e0b!important;color:#fff!important}
-.logic-tab:first-child.active{background:#1d4ed8!important;border-color:#1d4ed8!important;color:#fff!important}
-.logic-badge{background:#fffbeb!important;color:#92400e!important;border-color:#fcd34d!important}
-.logic-preview,.logic-warning{margin-top:8px!important}
-.info{margin-top:10px!important}
-
-/* Hide AI details by default but keep optional card small */
-.ai-box{display:none!important}
-
-/* Preview Delta & Apply: no sticky collision, stable table, preview remains visible */
-#preview-section{overflow:hidden!important}
-#preview-section .section-head{position:static!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;background:#f5faff!important;border-bottom:1px solid #e4e2db!important}
-#preview-section .section-body{padding:16px 18px!important;background:#fff!important}
-.stats{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;margin:0 0 12px 0!important;position:static!important;transform:none!important}
-.stat{min-height:86px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important}
-.table-wrap{max-height:380px!important;overflow:auto!important;border:1px solid #e4e2db!important;border-radius:10px!important;background:#fff!important;position:relative!important;transform:none!important;margin:0!important}
-.table-wrap table{width:100%!important;border-collapse:collapse!important}
-.table-wrap th{position:sticky!important;top:0!important;background:#eaf4ff!important;z-index:2!important}
-#apply-btn[disabled]{opacity:.75!important}
-
-@media(max-width:900px){
-  .layout{grid-template-columns:1fr!important}
-  .side{position:static!important}
-  #app main section:nth-of-type(2) .section-body.grid2,
-  #app main section:nth-of-type(3) .section-body.grid2{grid-template-columns:1fr!important}
-  .logic-panel{margin-left:0!important}
-  .map-row,.logic-grid-3{grid-template-columns:1fr!important}
-  .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-}
+.preview-card .section-head{position:static!important;top:auto!important;z-index:auto!important}
+.preview-card{overflow:hidden!important}
+.preview-card .section-body{padding-top:16px!important}
+.preview-card .stats{position:relative!important;z-index:1!important;margin-top:0!important}
+.preview-card .table-wrap{position:relative!important;z-index:1!important;margin-top:12px!important;max-height:420px!important;background:#fff!important}
+#apply-btn:disabled{background:#e5e7eb!important;border-color:#d1d5db!important;color:#6b7280!important;opacity:1!important;cursor:not-allowed!important}
+#detect-btn:disabled{background:#f3f4f6!important;border-color:#d1d5db!important;color:#6b7280!important;opacity:1!important;cursor:not-allowed!important}
+.main-head .row .btn:not(.btn-primary){display:none!important}
+.section-head{position:static!important}
+.card{overflow:hidden}
 
 </style>
 </head>
@@ -318,7 +255,7 @@ Simpan <b>Project JSON</b> jika ingin lanjut di lain waktu, lalu gunakan <b>Down
         </div>
       </section>
 
-      <section class="card">
+      <section class="card preview-card">
         <div class="section-head"><div><b>Preview Delta & Apply</b><div class="muted">Review dulu sebelum masuk ke Working Master.</div></div><div class="row"><button class="btn" id="detect-btn" onclick="detectDelta()">🔍 Detect Changes</button><button class="btn btn-primary" id="apply-btn" onclick="applyDelta()" disabled>✓ Apply to Working Master</button></div></div>
         <div class="section-body">
           <div class="stats" style="margin-bottom:12px"><div class="stat"><b id="st-mod">0</b><span class="muted">Modified fields</span></div><div class="stat"><b id="st-new">0</b><span class="muted">New NIK</span></div><div class="stat"><b id="st-off">0</b><span class="muted">Not in reference</span></div><div class="stat"><b id="st-same">0</b><span class="muted">No change</span></div></div>
@@ -781,7 +718,7 @@ function detectDelta(){
   setExceptions([],warnings);
   S.changes=changes;S.lastDetected=changes.filter(x=>x.status==='modified').length;S.lastDetectAt=new Date().toISOString();S.steps[S.activeStep].changes=changes;S.steps[S.activeStep].changeCount=changes.length;renderDelta(same);updateHealth();autoSave('detect');const mod=changes.filter(x=>x.status==='modified').length;const nw=changes.filter(x=>x.status==='new').length;const off=changes.filter(x=>x.status==='not_in_reference').length;toast('Detect complete: '+mod.toLocaleString()+' updates, '+nw.toLocaleString()+' new NIK, '+off.toLocaleString()+' not in reference')
 }
-function renderDelta(sameOverride){const ch=getCurrentChanges();const activeStep=S.steps?.[S.activeStep]||{};const alreadyApplied=!!activeStep.applied;document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';document.getElementById('apply-btn').disabled=true;updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');if(alreadyApplied){ap.disabled=true;ap.textContent='✓ Applied Successfully';ap.classList.add('btn-primary')}else{ap.disabled=false;ap.textContent='✓ Apply to Working Master';ap.classList.remove('btn-primary')}updateColumnSafety()}
+function renderDelta(sameOverride){const ch=getCurrentChanges();const activeStep=S.steps?.[S.activeStep]||{};const alreadyApplied=!!activeStep.applied;document.getElementById('st-mod').textContent=ch.filter(x=>x.status==='modified').length.toLocaleString();document.getElementById('st-new').textContent=ch.filter(x=>x.status==='new').length.toLocaleString();document.getElementById('st-off').textContent=ch.filter(x=>x.status==='not_in_reference').length.toLocaleString();document.getElementById('st-same').textContent=(sameOverride??0).toLocaleString();const tb=document.getElementById('delta-body');tb.innerHTML='';if(!ch.length){tb.innerHTML='<tr><td colspan="7" class="muted">Belum ada preview.</td></tr>';const ap0=document.getElementById('apply-btn');ap0.disabled=true;ap0.textContent='✓ Apply to Working Master';ap0.classList.add('btn-primary');updateColumnSafety();return}ch.slice(0,200).forEach(x=>{const cls=x.status==='new'?'tag-new':x.status==='not_in_reference'?'tag-off':'tag-mod';const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.key)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.col)+'</td><td>'+esc(x.before||'—')+'</td><td>'+esc(x.after||'—')+'</td><td><span class="tag '+cls+'">'+esc(x.status)+'</span></td><td>'+x.confidence+'%</td>';tb.appendChild(tr)});const ap=document.getElementById('apply-btn');if(alreadyApplied){ap.disabled=true;ap.textContent='✓ Applied Successfully';ap.classList.add('btn-primary')}else{ap.disabled=false;ap.textContent='✓ Apply to Working Master';ap.classList.remove('btn-primary')}updateColumnSafety()}
 function esc(v){return String(v).replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
 
 function normalizeEmail(e){return String(e||'').trim().toLowerCase()}
@@ -943,71 +880,5 @@ function updateHealth(){
 renderTypes();
 updateLandingRestore();
 </script>
-
-
-<script>
-/* ===== DeltaHub Final Behavior Patch - 2026-06-30 ===== */
-(function(){
-  function byText(selector, text){
-    return Array.from(document.querySelectorAll(selector)).filter(el => (el.textContent||'').trim().includes(text));
-  }
-  function cleanLabels(){
-    byText('b','1. Working Master').forEach(el=>el.textContent='Working Master');
-    byText('b','3. Upload Reference').forEach(el=>el.textContent='Upload Reference');
-    byText('b','4. Select Columns to Update').forEach(el=>el.textContent='Select Columns to Update');
-    byText('b','6. Preview Delta & Apply').forEach(el=>el.textContent='Preview Delta & Apply');
-  }
-  function markPreview(){
-    const sections=Array.from(document.querySelectorAll('#app main section.card'));
-    sections.forEach(sec=>{
-      if((sec.textContent||'').includes('Preview Delta & Apply')) sec.id='preview-section';
-    });
-  }
-  function fixDuplicateButtons(){
-    const mainHead=document.querySelector('.main-head .row');
-    if(mainHead){
-      Array.from(mainHead.querySelectorAll('button')).forEach(btn=>{
-        if(btn.textContent.trim()==='Save Project JSON') btn.style.display='none';
-        else btn.style.display='inline-flex';
-      });
-    }
-  }
-  function preservePreviewAfterDownload(){
-    const finalBtn=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Download Final Excel');
-    const changeBtn=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Download Changelog');
-    [finalBtn,changeBtn].forEach(btn=>{
-      if(!btn || btn.dataset.dhPatched) return;
-      btn.dataset.dhPatched='1';
-      btn.addEventListener('click',()=>{
-        setTimeout(()=>{
-          if(window.S && Array.isArray(S.changes) && S.changes.length){
-            try{ renderDelta(0); }catch(e){}
-          }
-          markPreview();
-        },250);
-      },true);
-    });
-  }
-  function applyAll(){cleanLabels();markPreview();fixDuplicateButtons();preservePreviewAfterDownload();}
-  window.addEventListener('load',applyAll);
-  document.addEventListener('click',()=>setTimeout(applyAll,80));
-  document.addEventListener('change',()=>setTimeout(applyAll,80));
-
-  /* Override renderDelta lightly so applied preview is not erased just because user reopens/downloads */
-  const oldRender=window.renderDelta;
-  if(typeof oldRender==='function'){
-    window.renderDelta=function(sameOverride){
-      const step=(window.S&&S.steps)?S.steps[S.activeStep]:null;
-      if(step && step.applied && (!S.changes || !S.changes.length) && Array.isArray(step.changes) && step.changes.length){
-        S.changes=step.changes;
-      }
-      const res=oldRender.apply(this,arguments);
-      applyAll();
-      return res;
-    };
-  }
-})();
-</script>
-
 </body>
 </html>
