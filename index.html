@@ -141,6 +141,40 @@ nav .badge{display:none!important}
 .logic-panel.compact .logic-tabs{display:none}
 @media(max-width:900px){.map-line{grid-template-columns:1fr}.map-arrow{text-align:left}.logic-panel.compact{margin-left:0}}
 
+
+/* ===== DeltaHub Visual Fix v27: compact mapping + access drawer ===== */
+#access-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.30);z-index:80;display:none}
+#access-backdrop.open{display:block}
+#access-drawer{position:fixed;top:0;right:0;width:min(420px,94vw);height:100vh;background:#fff;border-left:1px solid #cfe3ff;box-shadow:-18px 0 45px rgba(15,23,42,.20);z-index:81;transform:translateX(110%);transition:transform .22s ease;display:flex;flex-direction:column;overflow:hidden}
+#access-drawer.open{transform:translateX(0)}
+.access-drawer-head{padding:16px 18px;border-bottom:1px solid #e2e8f0;background:#f5faff;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.access-drawer-body{padding:16px 18px;overflow:auto}
+.access-compact{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start}
+.access-compact .warn{min-width:0;overflow-wrap:anywhere}
+.access-compact .btn{white-space:nowrap}
+
+#mapping-box .map-item{border:1px solid #cfe3ff;background:#fff;border-radius:14px;padding:12px 14px;margin-top:10px;overflow:hidden}
+#mapping-box .map-line{display:grid;grid-template-columns:minmax(150px,210px) 24px minmax(240px,1fr) max-content max-content;gap:10px;align-items:center;width:100%}
+#mapping-box .map-target{font-weight:800;color:#111827;min-width:0;overflow-wrap:anywhere}
+#mapping-box .map-arrow{text-align:center;color:#64748b;font-weight:800}
+#mapping-box .map-line select.input,#mapping-box .map-line .input{width:100%;min-width:0}
+#mapping-box .map-action-copy,#mapping-box .map-action-logic{white-space:nowrap}
+#mapping-box .logic-panel.compact{margin:12px 0 0 0!important;width:100%;max-width:100%;padding:14px;background:#f8fbff;border:1px solid #bfdbfe;border-radius:12px;overflow:hidden}
+#mapping-box .logic-grid-3{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(220px,1.15fr) minmax(180px,1fr);gap:12px;align-items:end;width:100%}
+#mapping-box .logic-field{min-width:0}
+#mapping-box .logic-field .input,#mapping-box .logic-field select,#mapping-box .logic-field input{width:100%;min-width:0;max-width:100%}
+#mapping-box .logic-preview,#mapping-box .logic-warning{max-width:100%;overflow-wrap:anywhere}
+#mapping-box .ok,#mapping-box .bad,#mapping-box .info{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:1050px){
+  #mapping-box .map-line{grid-template-columns:1fr 24px 1fr}
+  #mapping-box .map-action-copy,#mapping-box .map-action-logic{justify-content:center}
+  #mapping-box .logic-grid-3{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  #mapping-box .map-line{grid-template-columns:1fr}
+  #mapping-box .map-arrow{text-align:left}
+}
+
 </style>
 </head>
 <body>
@@ -907,6 +941,23 @@ function updateHealth(){
   const lp=document.getElementById('landing-progress'); if(lp) lp.style.width=pct+'%';
 }
 
+
+
+function openAccessDrawer(){
+  const d=document.getElementById('access-drawer');
+  const b=document.getElementById('access-backdrop');
+  if(d)d.classList.add('open');
+  if(b)b.classList.add('open');
+}
+function closeAccessDrawer(){
+  const d=document.getElementById('access-drawer');
+  const b=document.getElementById('access-backdrop');
+  if(d)d.classList.remove('open');
+  if(b)b.classList.remove('open');
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')closeAccessDrawer();
+});
 
 renderTypes();
 updateLandingRestore();
