@@ -307,6 +307,52 @@ nav .badge{display:none!important}
 .header-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#ecfdf5;color:#166534;border:1px solid #86efac;padding:4px 8px;font-size:11px;font-weight:800}
 @media(max-width:900px){.header-tools{grid-template-columns:1fr}}
 
+
+
+/* ===== Header Row Visual Compact Fix v30 ===== */
+.header-tools{
+  margin-top:10px!important;
+  background:#f8fbff!important;
+  border:1px solid #bfdbfe!important;
+  border-radius:12px!important;
+  padding:10px!important;
+  display:grid!important;
+  grid-template-columns:minmax(130px,165px) minmax(0,1fr)!important;
+  gap:10px!important;
+  align-items:end!important;
+  width:100%!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+.header-tools .field{margin-bottom:0!important;min-width:0!important}
+.header-tools .select{width:100%!important;min-width:0!important;max-width:100%!important;text-overflow:ellipsis!important}
+.header-preview{
+  grid-column:1/-1!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+  color:#0f4ea8!important;
+  background:#eef7ff!important;
+  border:1px solid #bfdbfe!important;
+  border-radius:10px!important;
+  padding:9px 10px!important;
+  max-height:84px!important;
+  overflow:auto!important;
+  overflow-wrap:anywhere!important;
+}
+.header-preview-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.header-rows{font-size:11px;color:#475569;font-weight:800;background:#fff;border:1px solid #dbeafe;border-radius:999px;padding:3px 8px;white-space:nowrap}
+.header-cols{color:#0f4ea8;white-space:normal}
+.header-badge{margin:0!important;white-space:nowrap}
+#app main > section:first-child .section-body{align-items:start!important}
+#app main > section:first-child .section-body > div:first-child,
+#app main > section:nth-of-type(3) .section-body > div:first-child{min-width:0!important;max-width:100%!important;overflow:hidden!important}
+#app main > section:first-child .warn,
+.master-note{height:172px!important;min-height:172px!important;max-height:172px!important;overflow:hidden!important}
+@media(max-width:900px){
+  .header-tools{grid-template-columns:1fr!important}
+  #app main > section:first-child .warn,.master-note{height:auto!important;min-height:auto!important;max-height:none!important}
+}
+
 </style>
 </head>
 <body>
@@ -686,7 +732,9 @@ function renderHeaderControls(type){
   }
   if(prev){
     const headers=(obj.cols||[]).slice(0,8).join(' | ');
-    prev.innerHTML='<span class="header-badge">Smart Header: Row '+((obj.headerRow||0)+1)+'</span><br>Detected columns: '+esc(headers)+(obj.cols&&obj.cols.length>8?' ...':'')+'<br><span class="muted">Data rows after header: '+(obj.data?.length||0).toLocaleString()+'</span>';
+    const visibleCols=(obj.cols||[]).slice(0,8).join(' | ');
+    const more=(obj.cols&&obj.cols.length>8)?' +' + (obj.cols.length-8) + ' more':'';
+    prev.innerHTML='<div class="header-preview-top"><span class="header-badge">Smart Header: Row '+((obj.headerRow||0)+1)+'</span><span class="header-rows">'+(obj.data?.length||0).toLocaleString()+' data rows</span></div><div class="header-cols">'+esc(visibleCols)+esc(more)+'</div>';
   }
 }
 function readFile(file,type){
