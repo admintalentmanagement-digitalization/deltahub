@@ -285,6 +285,20 @@ nav .badge{display:none!important}
   #mapping-box .map-line{grid-template-columns:1fr!important}
 }
 
+
+/* ===== Recent Projects Front Cleanup v29 ===== */
+.recent-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px}
+.recent-bulk-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.recent-list{max-height:370px;overflow-y:auto;padding-right:4px}
+.recent-item{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.recent-check{width:18px;height:18px;margin-top:4px;accent-color:#1b4fd8;cursor:pointer}
+.recent-actions{grid-column:2;display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
+.recent-list::-webkit-scrollbar{width:8px}
+.recent-list::-webkit-scrollbar-thumb{background:#bfdbfe;border-radius:999px}
+.recent-list::-webkit-scrollbar-track{background:#f8fbff;border-radius:999px}
+.btn-danger-outline{background:#fff;color:#991b1b;border-color:#fecaca}
+.btn-danger-outline:hover{background:#fee2e2}
+
 </style>
 </head>
 <body>
@@ -450,6 +464,7 @@ let S={projectName:'',projectType:'',steps:[],activeStep:0,master:{name:'',data:
 
 const DB_NAME='DeltaHubDB', STORE_NAME='autosave', AUTO_KEY='lastProject', RECENT_KEY='recentProjects';
 let autosaveTimer=null;
+let selectedRecentProjects=new Set();
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(STORE_NAME))db.createObjectStore(STORE_NAME)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbSet(key,value){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
@@ -473,16 +488,46 @@ async function updateLandingRestore(){
   const box=document.getElementById('continue-box');if(!box)return;
   try{
     const list=await idbGet(RECENT_KEY)||[];
+    selectedRecentProjects=new Set([...selectedRecentProjects].filter(id=>list.some(x=>x&&x.projectId===id)));
     if(!list.length){box.classList.add('hidden');box.innerHTML='';return}
     box.classList.remove('hidden');
-    box.innerHTML='<h4 style="margin-bottom:6px">Recent Projects</h4><div class="recent-list">'+list.map(x=>{
+    const checkedCount=selectedRecentProjects.size;
+    const toolbar='<div class="recent-toolbar"><h4>Recent Projects</h4><div class="recent-bulk-actions"><button class="btn btn-sm" onclick="toggleSelectAllRecent()">'+(checkedCount&&checkedCount===list.length?'Unselect All':'Select All')+'</button><button class="btn btn-sm btn-danger-outline" onclick="deleteSelectedRecentProjects()" '+(!checkedCount?'disabled':'')+'>🗑️ Delete Selected'+(checkedCount?' ('+checkedCount+')':'')+'</button></div></div>';
+    box.innerHTML=toolbar+'<div class="recent-list">'+list.map(x=>{
       const saved=formatTime(x.updatedAt);const step=x.step||x.snapshot?.steps?.[x.snapshot?.activeStep||0]?.name||'-';
-      return '<div class="recent-item"><div class="recent-title">'+esc(x.projectName||'-')+'</div><div class="recent-meta">Last autosaved: '+saved+' • Step: '+esc(step)+'</div><div class="recent-actions"><button class="btn btn-sm btn-primary" onclick="openRecentProject(\''+esc(x.projectId)+'\')">Open</button><button class="btn btn-sm btn-soft-danger" onclick="deleteRecentProject(\''+esc(x.projectId)+'\')">🗑️</button></div></div>'
-    }).join('')+'</div>';
+      const id=esc(x.projectId||'');
+      const checked=selectedRecentProjects.has(x.projectId)?'checked':'';
+      return '<div class="recent-item"><input class="recent-check" type="checkbox" '+checked+' onchange="toggleRecentSelection(\''+id+'\',this.checked)"><div><div class="recent-title">'+esc(x.projectName||'-')+'</div><div class="recent-meta">Last autosaved: '+saved+' • Step: '+esc(step)+'</div></div><div class="recent-actions"><button class="btn btn-sm btn-primary" onclick="openRecentProject(\''+id+'\')">Open</button></div></div>'
+    }).join('')+'</div><div class="muted" style="margin-top:8px;font-size:12px">Menampilkan maksimal 3 project sekaligus. Scroll untuk melihat project lain.</div>';
   }catch(e){console.warn(e)}
 }
 async function openRecentProject(projectId){const list=await idbGet(RECENT_KEY)||[];const item=list.find(x=>x.projectId===projectId);if(!item||!item.snapshot)return toast('Project history tidak ditemukan',true);hydrateState(item.snapshot);ensureProjectId();await idbSet(AUTO_KEY,serializeState());showApp();toast('Project dibuka dari Recent Projects')}
-async function deleteRecentProject(projectId){if(!confirm('Hapus project ini dari Recent Projects?'))return;let list=await idbGet(RECENT_KEY)||[];const item=list.find(x=>x.projectId===projectId);list=list.filter(x=>x.projectId!==projectId);await idbSet(RECENT_KEY,list);const last=await idbGet(AUTO_KEY);if(last&&last.projectId===projectId){await idbDel(AUTO_KEY)}updateLandingRestore();toast('Project history dihapus')}
+function toggleRecentSelection(projectId,checked){
+  if(checked)selectedRecentProjects.add(projectId); else selectedRecentProjects.delete(projectId);
+  updateLandingRestore();
+}
+async function toggleSelectAllRecent(){
+  const list=await idbGet(RECENT_KEY)||[];
+  if(selectedRecentProjects.size===list.length){selectedRecentProjects.clear()}else{selectedRecentProjects=new Set(list.map(x=>x.projectId))}
+  updateLandingRestore();
+}
+async function deleteRecentProject(projectId){
+  selectedRecentProjects=new Set([projectId]);
+  return deleteSelectedRecentProjects();
+}
+async function deleteSelectedRecentProjects(){
+  const ids=[...selectedRecentProjects];
+  if(!ids.length)return toast('Pilih project yang mau dihapus dulu',true);
+  if(!confirm('Hapus '+ids.length+' project dari Recent Projects?'))return;
+  let list=await idbGet(RECENT_KEY)||[];
+  list=list.filter(x=>!ids.includes(x.projectId));
+  await idbSet(RECENT_KEY,list);
+  const last=await idbGet(AUTO_KEY);
+  if(last&&ids.includes(last.projectId)){await idbDel(AUTO_KEY)}
+  selectedRecentProjects.clear();
+  updateLandingRestore();
+  toast(ids.length+' project history dihapus');
+}
 async function continueLastProject(){const obj=await idbGet(AUTO_KEY);if(!obj)return toast('Tidak ada autosave project',true);hydrateState(obj);ensureProjectId();showApp();toast('Project dipulihkan dari autosave')}
 async function clearAutosave(){if(!confirm('Hapus autosave project terakhir?'))return;await idbDel(AUTO_KEY);updateLandingRestore();toast('Autosave dihapus')}
 window.addEventListener('beforeunload',e=>{if(S&&S.projectName){autoSave('beforeunload');e.preventDefault();e.returnValue='DeltaHub project belum tentu tersimpan. Save Project JSON atau tunggu autosave selesai.'}});
