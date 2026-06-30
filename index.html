@@ -241,6 +241,14 @@ nav .badge{display:none!important}
   }
 }
 
+
+/* ===== Working Master Note Compact Fix ===== */
+.master-note{background:#eef7ff;border:1px solid #bfdbfe;color:#0f4ea8;border-radius:12px;padding:16px 18px;font-size:13px;line-height:1.5;min-height:150px;display:flex;flex-direction:column;justify-content:center;gap:8px;overflow:hidden}
+.master-note b{color:#0b3f91}
+.master-note p{margin:0}
+.master-note .note-muted{font-size:12px;color:#245f9f;line-height:1.55}
+@media(max-width:900px){.master-note{min-height:auto}}
+
 </style>
 </head>
 <body>
@@ -326,10 +334,7 @@ nav .badge{display:none!important}
         <div class="section-head"><div><b>Working Master</b><div class="muted">File utama yang akan terus diperbarui sampai final.</div></div></div>
         <div class="section-body grid2">
           <div><div class="drop" id="drop-master" ondragover="over(event,this)" ondragleave="leave(this)" ondrop="dropFile(event,'master',this)"><input type="file" accept=".xlsx,.xls,.csv" onchange="pickFile(event,'master')"><div style="font-size:30px">📘</div><b>Upload Working Master</b><span class="muted">Excel / CSV</span></div><div class="pill hidden" id="pill-master"></div></div>
-          <div class="warn"><b>Working Master</b><br>
-Master akan terkunci selama project berjalan.<br>
-<b>1 project = 1 master data.</b><br><br>
-Simpan <b>Project JSON</b> jika ingin lanjut di lain waktu, lalu gunakan <b>Download Final Excel</b> setelah semua update selesai.</div>
+          <div class="master-note"><p><b>Working Master</b></p><p>Master terkunci selama project berjalan.</p><p><b>1 project = 1 master data.</b></p><p class="note-muted">Simpan Project JSON jika ingin lanjut nanti. Download Final Excel setelah update selesai.</p></div>
         </div>
       </section>
 
