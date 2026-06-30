@@ -52,6 +52,58 @@
 .logic-badge{display:inline-block;background:#eef2ff;color:#1b4fd8;border:1px solid #c7d2fe;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:800;margin-left:5px}
 @media(max-width:900px){.logic-grid-3{grid-template-columns:1fr}}
 
+
+
+/* ===== DeltaHub UI Cleanup Patch - Latest ===== */
+nav .badge{display:none!important}
+.main-head{position:sticky;top:58px;background:#eaf4ff;z-index:4;padding:10px 0;margin-bottom:12px}
+.main-head .row .btn:first-child{display:none!important} /* remove duplicate Save Project button */
+.card{border-radius:16px}
+.section-head{padding:13px 18px;background:#f5faff}
+.section-body{padding:18px}
+.side .ok,.side .warn,.exception-empty,.exception-card{font-size:12px}
+.side-title{margin-top:16px;color:#7a8394}
+.drop.locked{min-height:150px;background:#f8fbff;border-color:#bfdbfe;border-style:solid}
+.lock-note{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.lock-note b{color:#1e40af}
+#drop-master.locked .lock-note{max-width:420px}
+#drop-ref{min-height:150px}
+#app .layout{grid-template-columns:250px minmax(0,1fr)}
+#column-tools{margin-bottom:14px}
+.selected-summary{background:#f8fbff;border-color:#bfdbfe}
+.selected-mini-chip{background:#1d4ed8}
+.chip{background:#fff;color:#334155;border-color:#cbd5e1}
+.chip.recommended:not(.selected){background:#fff;color:#334155;border-color:#cbd5e1}
+.chip.selected{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.chip.disabled{display:none!important}
+#mapping-box{background:#fff;border-top:1px solid #e2e8f0!important}
+#mapping-box h3{font-size:18px;margin-bottom:10px}
+.attention{background:#fef2f2!important;border-color:#fca5a5!important;color:#991b1b!important}
+.logic-panel{background:#f8fbff;border:1px solid #bfdbfe;border-radius:14px;padding:12px;margin:8px 0 12px}
+.logic-tabs{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.logic-tab{border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;border:1px solid #cbd5e1;background:#fff;cursor:pointer}
+.logic-tab.active{background:#f59e0b!important;border-color:#f59e0b!important;color:#fff!important}
+.logic-tab:first-child.active{background:#1d4ed8!important;border-color:#1d4ed8!important}
+.logic-grid-3{display:grid;grid-template-columns:180px minmax(220px,1fr) 220px;gap:12px;align-items:end}
+.logic-field label{display:block;font-size:12px;font-weight:800;color:#64748b;margin-bottom:6px}
+.logic-preview{background:#ecfdf5;border:1px solid #86efac;color:#166534;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:700;margin-top:10px}
+.logic-warning{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:700;margin-top:10px}
+.logic-badge{display:inline-block;background:#fffbeb;color:#92400e;border:1px solid #fcd34d;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;margin-left:5px}
+.map-row{display:grid;grid-template-columns:210px 26px minmax(220px,1fr);gap:10px;align-items:center;margin-top:12px}
+.map-target{font-weight:800;color:#111827}
+.map-arrow{text-align:center;color:#64748b;font-weight:800}
+.info{background:#f8fbff;border:1px solid #bfdbfe;border-radius:14px;padding:12px;margin-top:12px}
+.info-line{font-size:13px;line-height:1.7}
+.bad{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;border-radius:10px;padding:9px 11px;font-size:12px;margin-top:8px}
+#app section:last-child{margin-bottom:90px}
+#app section:last-child .section-head{position:sticky;top:124px;z-index:3}
+.stats .stat{background:#fff;border-color:#dbeafe}
+.stats .stat b{color:#111827}
+.table-wrap{max-height:380px}
+.ai-box{display:none}
+#access-status,#access-body,.access-row,#access-body+*{ }
+@media(max-width:900px){.logic-grid-3,.map-row{grid-template-columns:1fr}.map-arrow{text-align:left}.main-head{position:static}}
+
 </style>
 </head>
 <body>
@@ -98,7 +150,7 @@
 <div class="wrap hidden" id="app">
   <div class="main-head">
     <div><h2 id="app-title">DeltaHub</h2><div class="muted" id="app-sub"></div></div>
-    <div class="row" style="margin-left:auto;justify-content:flex-end"><button class="btn btn-sm" onclick="saveProjectJson()">Save Project JSON</button><button class="btn btn-sm" onclick="downloadChangelog()">Download Changelog</button><button class="btn btn-sm btn-primary" onclick="downloadFinal()">Download Final Excel</button></div>
+    <div class="row" style="margin-left:auto;justify-content:flex-end"><button class="btn btn-sm" onclick="downloadChangelog()">Download Changelog</button><button class="btn btn-sm btn-primary" onclick="downloadFinal()">Download Final Excel</button></div>
   </div>
   <div class="layout">
     <aside class="card card-pad side">
@@ -125,20 +177,10 @@
         <div class="section-head"><div><b>1. Working Master</b><div class="muted">File utama yang akan terus diperbarui sampai final.</div></div></div>
         <div class="section-body grid2">
           <div><div class="drop" id="drop-master" ondragover="over(event,this)" ondragleave="leave(this)" ondrop="dropFile(event,'master',this)"><input type="file" accept=".xlsx,.xls,.csv" onchange="pickFile(event,'master')"><div style="font-size:30px">📘</div><b>Upload Working Master</b><span class="muted">Excel / CSV</span></div><div class="pill hidden" id="pill-master"></div></div>
-          <div class="warn"><b>Catatan:</b><br>
-Working Master akan disimpan di browser selama sesi ini.<br>
-Klik <b>Save Project JSON</b> jika ingin melanjutkan project di lain waktu.<br>
-Klik <b>Download Final Excel</b> setelah seluruh update selesai.
-<hr style="margin:10px 0;border:0;border-top:1px solid #bfdbfe">
-<b>Aturan Working Master:</b>
-<ul style="margin:8px 0 0 18px;padding:0;line-height:1.55">
-  <li>Working Master menjadi base data project dan akan dikunci setelah diupload.</li>
-  <li>Untuk menggunakan master berbeda, pastikan seluruh update sudah di-apply ke Working Master dan Final Excel sudah di-download, kemudian buat Project Baru.</li>
-  <li>Jika ingin menambah kolom baru atau mengubah nama kolom, lakukan pada file master hasil download lalu buat Project Baru.</li>
-  <li>Kolom yang akan diupdate harus sudah tersedia di Working Master.</li>
-  <li>Nama kolom Working Master dan Reference harus sama persis.</li>
-  <li>Duplicate key dengan nilai berbeda tidak diperbolehkan.</li>
-</ul></div>
+          <div class="warn"><b>Working Master</b><br>
+Master akan terkunci selama project berjalan.<br>
+<b>1 project = 1 master data.</b><br><br>
+Simpan <b>Project JSON</b> jika ingin lanjut di lain waktu, lalu gunakan <b>Download Final Excel</b> setelah semua update selesai.</div>
         </div>
       </section>
 
@@ -188,7 +230,7 @@ Klik <b>Download Final Excel</b> setelah seluruh update selesai.
       </section>
 
       <section class="card" style="margin-bottom:14px">
-        <div class="section-head"><div><b>5. AI Assistant</b><div class="muted">Manual only. Token hanya terpakai kalau tombol ini diklik.</div></div></div>
+        <div class="section-head"><div><b>AI Assistant <span class="muted">(Optional)</span></b><div class="muted">Disembunyikan default. Dipakai hanya jika diperlukan.</div></div></div>
         <div class="section-body">
           <div class="ai-box">
             <div class="grid2"><div class="field"><label>DeepSeek API Key</label><input class="input" type="password" id="api-key" placeholder="sk-..." oninput="checkApi()"></div><div class="field"><label>Optional Prompt</label><input class="input" id="ai-prompt" placeholder="Contoh: prioritaskan Employee Status dan Position"></div></div>
@@ -291,7 +333,7 @@ function updateMasterLock(){
   const locked=!!(S.master&&S.master.data&&S.master.data.length);
   drop.classList.toggle('locked',locked);
   if(locked){
-    drop.innerHTML='<div style="font-size:30px">🔒</div><b>Working Master Locked</b><span class="muted">'+esc(S.master.name||'Master loaded')+' • '+(S.master.data?.length||0).toLocaleString()+' rows</span><div class="lock-note"><b>Project base data locked.</b><br>Untuk memakai master berbeda, buat Project Baru. Ini mencegah Working Master tertukar di tengah proses.</div>';
+    drop.innerHTML='<div style="font-size:30px">🔒</div><b>Working Master Locked</b><span class="muted">'+esc(S.master.name||'Master loaded')+' • '+(S.master.data?.length||0).toLocaleString()+' rows</span><div class="lock-note"><b>Locked.</b><br>Master terkunci selama project berjalan.<br>1 project = 1 master data.</div>';
   }else if(!drop.querySelector('input')){
     drop.innerHTML='<input type="file" accept=".xlsx,.xls,.csv" onchange="pickFile(event,\'master\')"><div style="font-size:30px">📘</div><b>Upload Working Master</b><span class="muted">Excel / CSV</span>';
   }
